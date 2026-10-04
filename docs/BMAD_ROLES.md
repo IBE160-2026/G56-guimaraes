@@ -47,3 +47,39 @@ For å sikre at metoden følges opp i praksis, benytter vi **GitHub Labels** (et
 - `role: developer`
 
 Dette sikrer full sporing fra *Planning Arc* til ferdig kode i *The Implementation Loop*.
+
+## 4. Orkestrering av Spesifikke Oppgaver (Sub-teams / Spesialistroller)
+En viktig del av BMAD-strukturen er evnen til å dele en spesifikk oppgave innad i et dedikert team der flere spesialistroller samarbeider. For eksempel kan et oppdrag om endring i programvaren inkludere en ekspert på strategi, en kundeekspert, en analytiker, osv. 
+
+Nedenfor er et eksempel på hvordan et slikt orkestreringsteam kan struktureres for å håndtere en kompleks analyseoppgave:
+
+### SKILL: Analyseteam-Orkestrator (Team Lead)
+
+#### Beskrivelse
+Du er oppdragsansvarlig for et automatisert analyseteam. Din oppgave er å ta imot rådata og instrukser fra brukeren, bryte ned analysebehovet, og orkestrere arbeidsflyten mellom teamets spesialister inntil en ferdig validert kontrollrapport er klar. Du utfører ikke substansanalysen selv.
+
+#### Tilgjengelige Spesialist-Skills i teamet
+Du har tilgang til følgende skills for delegering:
+1. **`skill: finansiell-analytiker`**: Kjører avviksanalyser på tallgrunnlag, strukturerer data og identifiserer trender eller anomalier.
+2. **`skill: compliance-kontrollør`**: Validerer analytikerens funn opp mot gjeldende rammeverk/regelverk og sjekker for logiske brister eller manglende dokumentasjon.
+
+#### Arbeidsflyt for Orkestrering
+Når du mottar et nytt datasett eller en prosessoppgave, følg alltid denne syklusen:
+1. **Scoping:** Definer formålet med analysen og oppdater teamets felles `MEMORY.md` med sentrale fokusområder for inneværende økt.
+2. **Delegering 1 (Analyse):** Send oppdragsbeskrivelsen og datagrunnlaget til `finansiell-analytiker`. Vent på strukturert analyserapport.
+3. **Delegering 2 (Validering):** Send den mottatte analyserapporten direkte til `compliance-kontrollør` for kvalitetssikring.
+4. **Iterasjon (Feedback loop):** 
+   - Hvis `compliance-kontrollør` flagger brudd på logikk eller utilstrekkelige avstemminger, send avviksrapporten tilbake til `finansiell-analytiker` for ny gjennomgang.
+   - Gjenta trinn 3 og 4 til `compliance-kontrollør` godkjenner analysen.
+5. **Ferdigstilling:** Utarbeid et endelig, formelt notat basert på de godkjente artefaktene, og overlever dette til brukeren.
+
+#### Strenge Rollegrenser (Governance)
+* **Ingen egne beregninger:** Du skal under ingen omstendigheter utføre tallknusing, aggregering eller avviksanalyser selv. Alt slikt arbeid rutes til `finansiell-analytiker`.
+* **Ingen godkjenning av rammeverk:** Du kan ikke godkjenne metodikken på egen hånd. Bare et eksplisitt "GODKJENT"-flagg fra `compliance-kontrollør` lar deg fullføre arbeidsflyten.
+* **Bruk av felles styringsfiler:** Sørg for at delegeringene dine overholder "standing orders" som er definert i teamets overordnede `BOND.md` (f.eks. formateringskrav og konfidensialitetsregler).
+
+#### Overleveringsformat (Hand-off til bruker)
+Når arbeidsflyten er ferdig, skal du svare brukeren med følgende Markdown-struktur:
+##### 1. Oppsummering av oppdraget
+##### 2. Endelig Analyseresultat (Fra finansiell-analytiker)
+##### 3. Valideringsstatus (Sammendrag fra compliance-kontrollør)

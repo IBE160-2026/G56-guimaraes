@@ -24,11 +24,11 @@ Forretningsmessig: 10+ betalende regnskapsbyråer eller SMB-kunder innen tre må
 
 ## Scope
 In for v1.
-Brukerside: Modulær opplasting av saldobalanse, reskontro, CRM-data, timelister og ESG-forbruk i CSV/Excel-format.
-Systemside: Automatisk mapping til kontoplan; Revisor KI-sjekk for balansekontroll (Debet = Kredit) og flagging av uvanlige transaksjoner; samstilling av operasjonelle og finansielle nøkkeltall; KI-generert ledelseskommentar og tiltaksliste på norsk; generering og nedlasting av komplett PDF-rapport; enkelt brukergrensesnitt for sikker opplasting.
+Brukerside: Modulær opplasting av saldobalanse, reskontro, CRM-data, timelister og ESG-forbruk i CSV/Excel og SAF-T format. Løsningen må kunne lese og analysere SAF-T filer direkte.
+Systemside: Automatisk mapping til kontoplan; Revisor KI-sjekk for balansekontroll (Debet = Kredit) og flagging av uvanlige transaksjoner; samstilling av operasjonelle og finansielle nøkkeltall på tvers av flere valutaer (flervalutasammenstilling); KI-generert ledelseskommentar og tiltaksliste på norsk; generering og nedlasting av komplett PDF-rapport; enkelt brukergrensesnitt for sikker opplasting.
 
 Explicitly out of v1.
-Direkte live API-koblinger mot ERP-systemer (kun filopplasting i V1). Automatisk skatte- eller årsregnskapsinnsending til Altinn. Flervalutasammenstilling i samme rapport (støtter kun én valuta per kjøring). Chatbot-funksjonalitet for å "snakke" med regnskapet (dette blir en naturlig utvidelse etter lansering).
+Direkte live API-koblinger mot ERP-systemer (kun filopplasting i V1). Automatisk skatte- eller årsregnskapsinnsending til Altinn. Chatbot-funksjonalitet for å "snakke" med regnskapet (dette blir en naturlig utvidelse etter lansering).
 
 ## Vision
 På kort sikt er målet enkelt: Bli standardverktøyet for hvordan SMB-er og regnskapsførere utarbeider styrepakker, fordi det er en løsning som er gratis å teste, fungerer like godt for én som for førti klienter, og leverer en ferdig, visuell PDF på sekunder.
