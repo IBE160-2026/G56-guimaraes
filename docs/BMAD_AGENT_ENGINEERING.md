@@ -28,3 +28,13 @@ Det viktigste ved BMAD-metodologien er **styring og avgrensning**. For å unngå
 * **Tone-of-Voice:** Ved generering av ledelseskommentarer skal agentens integrerte LLM-prompts settes opp til å være formelle, konsise og faktabaserte (forankret i bedriftens tall), uten unødvendig fyllord.
 
 Gjennom dette oppsettet fungerer BMAD-metoden som rekkverk: Den gir agenten frihet til å kode raskt og effektivt, samtidig som den holdes strengt innenfor de forretningsmessige og fagspesifikke grensene satt for MVP-en.
+
+## 4. Utvidet AI-Agent Team basert på BMAD (AiDD Flow)
+For å sikre at arbeidsflyten (Clarify ➔ Plan ➔ Build & verify ➔ Learn & adjust) gjennomføres sømløst, benytter vi et sett med spesialiserte AI-agenter (Skills) for selve kodingen. Dette er agent-teamet som faktisk implementerer arkitekturen:
+
+* **Recon-Agent (`skill: bmad-recon`):** Utforsker kodebasen og henter kontekst før planlegging.
+* **Architecture-Agent (`skill: bmad-plan`):** Den tekniske planleggeren (ingen koding tillatt, kun spesifikasjoner og API-kontrakter).
+* **Build-Agent (`skill: bmad-build`):** Den utførende kodeslaven som slavisk implementerer logikken fra planen.
+* **Validation-Agent (`skill: bmad-verify`):** QA og tester som sjekker sikkerhet og "Debet=Kredit" compliance.
+* **Meta-Agent: Competence Monitor / Team HR (`skill: bmad-capabilities`):** 
+  En meta-agent som overvåker de andre agentenes ytelse og scope. Hvis teamet for eksempel får i oppdrag å parse et ukjent proprietært ERP-format, skal denne agenten gripe inn, avbryte oppgaven, og **flagge en "Kompetansemangel" (Skill Gap)**. Varsler menneskelig utvikler om at en ny agent-skill må opprettes for å hindre AI-hallusinasjoner.
