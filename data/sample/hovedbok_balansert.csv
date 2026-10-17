@@ -1,0 +1,15 @@
+Bilagsnr,Dato,Konto,Kontonavn,Beskrivelse,Debet,Kredit
+1,2026-01-15,1500,Kundefordringer,Faktura 101 til kunde,150000.0,0.0
+1,2026-01-15,3000,Salgsinntekter,Faktura 101 til kunde,0.0,150000.0
+2,2026-01-20,1920,Bankinnskudd,Kontantsalg butikk,50000.0,0.0
+2,2026-01-20,3000,Salgsinntekter,Kontantsalg butikk,0.0,50000.0
+3,2026-01-22,4000,Varekostnad,Varekjøp fra Grossist AS,60000.0,0.0
+3,2026-01-22,2400,Leverandørgjeld,Varekjøp fra Grossist AS,0.0,60000.0
+4,2026-01-25,5000,Lønnskostnad,Lønnsutbetaling januar,30000.0,0.0
+4,2026-01-25,1920,Bankinnskudd,Lønnsutbetaling januar,0.0,30000.0
+5,2026-01-28,1920,Bankinnskudd,Kundeinnbetaling faktura 101 delvis,110000.0,0.0
+5,2026-01-28,1500,Kundefordringer,Kundeinnbetaling faktura 101 delvis,0.0,110000.0
+6,2026-01-30,2400,Leverandørgjeld,Betaling av gammel leverandørfaktura,90000.0,0.0
+6,2026-01-30,1920,Bankinnskudd,Betaling av gammel leverandørfaktura,0.0,90000.0
+7,2026-01-31,1920,Bankinnskudd,Overføring/tilbakeføring leverandør,40000.0,0.0
+7,2026-01-31,2400,Leverandørgjeld,Overføring/tilbakeføring leverandør,0.0,40000.0

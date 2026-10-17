@@ -1,0 +1,8 @@
+Konto,Kontonavn,IB,Debet,Kredit,UB
+1920,Bankinnskudd,100000.0,200000.0,120000.0,180000.0
+1500,Kundefordringer,50000.0,150000.0,110000.0,90000.0
+2050,Annen egenkapital,-110000.0,0.0,0.0,-110000.0
+2400,Leverandørgjeld,-40000.0,90000.0,100000.0,-50000.0
+3000,Salgsinntekter,0.0,0.0,190000.0,-190000.0
+4000,Varekostnad,0.0,60000.0,0.0,60000.0
+5000,Lønnskostnad,0.0,30000.0,0.0,30000.0
