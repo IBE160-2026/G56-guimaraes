@@ -14,6 +14,9 @@ Siden målet er hurtig vekst (10+ betalende kunder raskt, 70%+ konvertering), kr
 * **SEO-Optimerer:** Sørger for at plattformen rangerer høyt på søkeord som "automatisk ledelsesrapport".
 * **Growth Hacker / GTM-Strateg:** Identifiserer de raskeste veiene til markedet. Kjører A/B-tester på prising og onboarding-flyt.
 
+## Hoveddokument for denne fasen
+* 📄 **[PRD.md - Product Requirements Document](./PRD.md)**: Formelle epics, brukerhistorier, funksjonelle krav ($IB + HB = UB$), ikke-funksjonelle krav og akseptansekriterier for v1.
+
 **Eksempler på innhold i denne mappen:**
 - Product Requirements Document (PRD)
 - Feature-lister for MVP og senere versjoner

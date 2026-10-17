@@ -15,6 +15,7 @@ For detaljer om spesifikke fageksperter og topp-10 % agent-personas, se `README.
 2. **[02_product (Market & Growth)](./02_product/README.md):** 
    - Eies av *Product Manager*.
    - Inneholder **Go-To-Market og Kommersielle Roller** (Markedsfører, Kundeekspert, SEO-optimerer, Growth Hacker).
+   - 📄 **Hovedartefakt:** **[PRD.md (Product Requirements Document)](./02_product/PRD.md)**
 
 3. **[03_ux (Design & Frontend)](./03_ux/README.md):** 
    - Eies av *UX Designer*.
@@ -23,6 +24,7 @@ For detaljer om spesifikke fageksperter og topp-10 % agent-personas, se `README.
 4. **[04_architecture (System & Sikkerhet)](./04_architecture/README.md):** 
    - Eies av *Architect*.
    - Inneholder **Elite Engineering og Sikkerhetsroller** (Backend Pipeline Master, LLM Integration Engineer, AppSec / CISO, og Test Automation SDET).
+   - 📄 **Hovedartefakt:** **[ARCHITECTURE.md (Teknisk Arkitektur og Systemdesign)](./04_architecture/ARCHITECTURE.md)**
 
 ## Utførelse og AI-Agents (AiDD)
 

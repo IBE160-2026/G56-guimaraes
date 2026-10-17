@@ -14,6 +14,9 @@ Her lagres teknisk systemdesign, dataflyt, infrastruktur og sikkerhetskrav.
 * **Test Automation Engineer (SDET):** Koder *Property-Based Testing* (f.eks. med `hypothesis`). Genererer tusenvis av unormale og provoserende scenarier (negative valutaer, ødelagt XML) for å stresse avviksdeteksjonen.
 * **Kontroller av Anbefalinger (AI Fact-Checker):** Filtrerer AI-ens utdata, og kjører "LLM-as-a-judge"-rutiner for å sikre null hallusinasjoner i ledelsesrapportene.
 
+## Hoveddokument for denne fasen
+* 📄 **[ARCHITECTURE.md - Teknisk Arkitektur og Systemdesign](./ARCHITECTURE.md)**: Teknologistakk, The AI Firewall (skille mellom deterministisk tallknusing og probabilistisk KI), mappestruktur og mock-arkitektur.
+
 **Eksempler på innhold i denne mappen:**
 - Systemarkitektur-diagrammer
 - Datamodeller, SAF-T parsere og flytskjemaer
