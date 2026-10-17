@@ -1,8 +1,7 @@
-streamlit==1.38.0
-pandas==2.2.2
-polars==1.6.0
-lxml==5.3.0
-pytest==8.3.3
-openai==1.44.1
-reportlab==4.2.2
-python-dotenv==1.0.1
+streamlit>=1.38.0
+pandas>=2.2.0
+openpyxl>=3.1.0
+pytest>=8.0.0
+openai>=1.40.0
+reportlab>=4.2.0
+python-dotenv>=1.0.0
