@@ -1,0 +1,13 @@
+module: core
+name: Core Architecture & Engineering
+skills:
+  - bmad-agent-architect
+  - bmad-agent-dev
+  - bmad-agent-ux-designer
+  - bmad-build
+  - bmad-code-review
+artifacts:
+  - src/
+  - tests/
+  - docs/04_architecture/
+  - docs/03_ux/

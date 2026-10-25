@@ -1,0 +1,10 @@
+skill_id,name,category,path
+bmad-agent-analyst,Business Analyst,BMM,.agents/skills/bmad-agent-analyst/SKILL.md
+bmad-agent-architect,System Architect,CORE,.agents/skills/bmad-agent-architect/SKILL.md
+bmad-agent-dev,Software Developer,CORE,.agents/skills/bmad-agent-dev/SKILL.md
+bmad-agent-pm,Product Manager,BMM,.agents/skills/bmad-agent-pm/SKILL.md
+bmad-agent-ux-designer,UX & Report Designer,CORE,.agents/skills/bmad-agent-ux-designer/SKILL.md
+bmad-build,Build & Verify,CORE,.agents/skills/bmad-build/SKILL.md
+bmad-code-review,QA & Compliance Review,CORE,.agents/skills/bmad-code-review/SKILL.md
+bmad-correct-course,Course Correction,BMM,.agents/skills/bmad-correct-course/SKILL.md
+bmad-create-epics-and-stories,Create Epics & Stories,BMM,.agents/skills/bmad-create-epics-and-stories/SKILL.md

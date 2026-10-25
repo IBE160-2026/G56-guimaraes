@@ -1,0 +1,21 @@
+framework: BMAD
+version: "6.0"
+ai_engine: Gemini Antigravity
+project: G56-guimaraes
+course: IBE160 Programmering med KI
+skills_root: ".agents/skills"
+rules_file: "GEMINI.md"
+
+modules:
+  - id: bmm
+    name: Business & Market Module
+    path: _bmad/bmm
+  - id: cis
+    name: Creative & Innovation Suite
+    path: _bmad/cis
+  - id: core
+    name: Core Architecture & Dev
+    path: _bmad/core
+  - id: custom
+    name: Custom Project Rules
+    path: _bmad/custom

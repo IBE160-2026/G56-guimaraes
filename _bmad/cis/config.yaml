@@ -1,0 +1,7 @@
+module: cis
+name: Creative & Innovation Suite
+skills:
+  - bmad-brainstorming
+  - bmad-advanced-elicitation
+artifacts:
+  - planning-artifacts/

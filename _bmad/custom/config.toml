@@ -1,0 +1,10 @@
+[custom]
+project_name = "G56-guimaraes"
+course = "IBE160"
+accounting_standard = "NS 4102"
+currency = "NOK"
+llm_model = "gpt-4o-mini"
+temperature = 0.2
+offline_mock_mode = true
+reconciliation_formula = "IB + Delta_HB = UB"
+double_entry_check = "sum(Debet) == sum(Kredit)"

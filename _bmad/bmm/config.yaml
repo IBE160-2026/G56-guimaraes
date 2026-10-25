@@ -1,0 +1,10 @@
+module: bmm
+name: Business & Market Module
+skills:
+  - bmad-agent-analyst
+  - bmad-agent-pm
+  - bmad-create-epics-and-stories
+  - bmad-correct-course
+artifacts:
+  - docs/01_analysis/
+  - docs/02_product/
