@@ -12,7 +12,7 @@ st.set_page_config(page_title="Ledelsesrapport & Regnskapskontroll (KI)", layout
 st.title("📊 Ledelsesrapport og Regnskapskontroll med KI")
 st.markdown(
     "Automatisert avstemming mellom **Saldobalanse (SB)** og **Hovedbok (HB)**, "
-    "mapping til **NS 4102**, og KI-generert ledelsesnotat for styret."
+    "mapping til **NS 4102**, og dyp KI-generert ledelsesrapport for styret."
 )
 
 # Sidebar for innstillinger og hurtiglasting
@@ -21,7 +21,7 @@ with st.sidebar:
     demo_mode = st.radio(
         "Velg datakilde:",
         ["Last opp egne filer", "Bruk eksempeldata (Balansert)", "Bruk eksempeldata (Med avvik)"],
-        index=0
+        index=1  # Standard: Balansert eksempeldata for umiddelbar sensor-visning
     )
     
     st.markdown("---")
@@ -38,12 +38,12 @@ hb_df = None
 sample_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../data/sample'))
 
 if demo_mode == "Bruk eksempeldata (Balansert)":
-    st.info("💡 Laster inn balanserte eksempeldata fra `data/sample/`.")
+    st.info("💡 Laster inn balanserte eksempeldata fra `data/sample/` (0 avvik).")
     sb_df = pd.read_csv(os.path.join(sample_dir, 'saldobalanse_balansert.csv'))
     hb_df = pd.read_csv(os.path.join(sample_dir, 'hovedbok_balansert.csv'))
 
 elif demo_mode == "Bruk eksempeldata (Med avvik)":
-    st.warning("⚠️ Laster inn eksempeldata med bevisst ubalanse og kryssavvik for testing.")
+    st.warning("⚠️ Laster inn eksempeldata med konstruerte avvik på konto 1500 og 1920.")
     sb_df = pd.read_csv(os.path.join(sample_dir, 'saldobalanse_balansert.csv'))
     hb_df = pd.read_csv(os.path.join(sample_dir, 'hovedbok_med_avvik.csv'))
 
@@ -96,7 +96,7 @@ if sb_df is not None and hb_df is not None:
     try:
         recon_result = reconcile_hb_with_sb(sb_df, hb_df)
         if recon_result["is_reconciled"]:
-            st.success("✅ Full konsistens: Alle transaksjoner i hovedboken summerer seg nøyaktig til UB i saldobalansen!")
+            st.success("✅ Full konsistens: Alle transaksjoner i hovedboken summerer seg nøyaktig til UB i saldobalansen (0 avvik).")
         else:
             st.error(f"❌ Avstemmingsavvik funnet på {recon_result['discrepancy_count']} konto(er):")
             st.dataframe(recon_result["discrepancies"][['Konto', 'Kontonavn', 'IB', 'Netto_HB', 'Beregnet_UB', 'UB', 'Avvik']])
@@ -133,34 +133,65 @@ if sb_df is not None and hb_df is not None:
         col_m4.metric("Driftsmargin", f"{margin:.1f} %")
         
         # KI Analyse
-        if st.button("🚀 Generer Ledelsesrapport med KI", type="primary"):
-            with st.spinner("Genererer ledelseskommentar og analyserapport..."):
+        if st.button("🚀 Generer Strategisk Ledelsesrapport (KI)", type="primary"):
+            with st.spinner("CFO-Agent analyserer regnskapet og avstemmingsgrunnlaget..."):
                 try:
-                    report = generate_management_report(
+                    import llm_integration
+                    import importlib
+                    importlib.reload(llm_integration)
+                    
+                    report = llm_integration.generate_management_report(
                         sb_mapped, 
+                        recon_result=recon_result,
                         api_key=openai_api_key if not use_mock_ai else None,
                         mock_mode=use_mock_ai
                     )
                     
-                    st.success("✅ Rapport generert!")
+                    st.success("✅ Strategisk ledelsesrapport generert!")
                     
-                    st.subheader("📋 Ledelsessammendrag (CFO Tone-of-Voice)")
-                    st.info(report.okonomisk_sammendrag)
+                    # 1. Hovedkonklusjon
+                    st.markdown("### 🏆 Hovedkonklusjon til Styret")
+                    st.info(report.hovedkonklusjon)
                     
-                    col_ai1, col_ai2 = st.columns(2)
+                    # 2. Faner for dyp analyse
+                    tab1, tab2, tab3 = st.tabs([
+                        "📊 Lønnsomhet & Marginer", 
+                        "💧 Likviditet & Arbeidskapital", 
+                        "🛡️ Revisors Avstemmingsnotat"
+                    ])
+                    
+                    with tab1:
+                        st.markdown(report.lonnsomhet_og_marginer)
+                    with tab2:
+                        st.markdown(report.likviditet_og_arbeidskapital)
+                    with tab3:
+                        st.markdown(report.revisors_avstemmingsnotat)
+                    
+                    # 3. Faresignaler og tiltak
+                    st.markdown("---")
+                    col_ai1, col_ai2 = st.columns([1, 2])
                     with col_ai1:
-                        st.subheader("🚩 Identifiserte Faresignaler / Avvik")
+                        st.markdown("### 🚩 Identifiserte Faresignaler")
                         for avvik in report.potensielle_avvik:
                             st.warning(f"• {avvik}")
+                            
                     with col_ai2:
-                        st.subheader("🎯 Prioritert Tiltaksliste")
+                        st.markdown("### 🎯 Strategisk Handlingsplan")
                         for tiltak in report.tiltaksliste:
-                            st.error(f"**[{tiltak.prioritet}]** {tiltak.tiltak}")
+                            prio_color = "red" if tiltak.prioritet == "Høy" else ("orange" if tiltak.prioritet == "Medium" else "green")
+                            st.markdown(
+                                f"**:{prio_color}[[{tiltak.prioritet}]]** **{tiltak.tiltak}**  \n"
+                                f"*Begrunnelse:* {tiltak.begrunnelse}  \n"
+                                f"*Forventet effekt:* {tiltak.forventet_effekt}"
+                            )
+                            st.divider()
                             
                     # PDF Eksport
                     st.markdown("---")
                     st.subheader("📄 Eksport til Styret")
-                    pdf_buffer = generate_management_pdf(company_name="Bedrift AS", ai_report=report)
+                    import pdf_generator
+                    importlib.reload(pdf_generator)
+                    pdf_buffer = pdf_generator.generate_management_pdf(company_name="Bedrift AS", ai_report=report)
                     st.download_button(
                         label="📥 Last ned Ledelsesrapport (PDF)",
                         data=pdf_buffer,

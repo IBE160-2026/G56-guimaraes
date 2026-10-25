@@ -29,28 +29,42 @@ class TestReportingAndExport:
         })
 
     def test_mock_mode_generates_valid_commentary(self, sample_mapped_df):
-        """Tester at mock-modus (frakoblet sensormodus) returnerer et validert Pydantic-objekt uten API-nøkkel."""
-        report = generate_management_report(sample_mapped_df, api_key=None, mock_mode=True)
+        """Tester at mock-modus returnerer en rik, validert CFO-analyse uten API-nøkkel."""
+        recon_mock = {"is_reconciled": True, "discrepancy_count": 0}
+        report = generate_management_report(sample_mapped_df, recon_result=recon_mock, api_key=None, mock_mode=True)
         
         assert isinstance(report, ManagementCommentary)
-        assert len(report.okonomisk_sammendrag) > 50
+        assert len(report.hovedkonklusjon) > 20
+        assert len(report.lonnsomhet_og_marginer) > 50
+        assert len(report.likviditet_og_arbeidskapital) > 50
+        assert len(report.revisors_avstemmingsnotat) > 50
         assert len(report.potensielle_avvik) >= 2
         assert len(report.tiltaksliste) >= 2
         
-        # Sjekk at tiltakene har prioriteter
+        # Sjekk at tiltakene har prioriteter og begrunnelser
         for item in report.tiltaksliste:
             assert item.prioritet in ["Høy", "Medium", "Lav"]
             assert len(item.tiltak) > 5
+            assert len(item.begrunnelse) > 5
+            assert len(item.forventet_effekt) > 5
+
+    def test_mock_mode_with_discrepancies(self, sample_mapped_df):
+        """Tester at mock-modus flagger revisjonsavvik dersom regnskapet ikke stemmer."""
+        recon_err = {"is_reconciled": False, "discrepancy_count": 2}
+        report = generate_management_report(sample_mapped_df, recon_result=recon_err, api_key=None, mock_mode=True)
+        
+        assert "ADVARSEL" in report.hovedkonklusjon.upper()
+        assert "feil" in report.revisors_avstemmingsnotat.lower()
 
     def test_pdf_generation_produces_valid_pdf_buffer(self, sample_mapped_df):
-        """Tester at PDF-motoren bygger et gyldig PDF-dokument in-memory."""
-        report = generate_management_report(sample_mapped_df, mock_mode=True)
+        """Tester at PDF-motoren bygger et gyldig PDF-dokument in-memory med ny layout."""
+        recon_mock = {"is_reconciled": True, "discrepancy_count": 0}
+        report = generate_management_report(sample_mapped_df, recon_result=recon_mock, mock_mode=True)
         pdf_buffer = generate_management_pdf(company_name="Testbedrift AS", ai_report=report)
         
         assert isinstance(pdf_buffer, io.BytesIO)
         pdf_bytes = pdf_buffer.getvalue()
         
-        # Sjekk at PDF-en ikke er tom
+        # Sjekk at PDF-en ikke er tom og har gyldige magic bytes
         assert len(pdf_bytes) > 1000
-        # Sjekk standard PDF magic bytes
         assert pdf_bytes.startswith(b"%PDF-")

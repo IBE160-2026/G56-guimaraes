@@ -31,8 +31,10 @@ Ingen av filene inneholder personopplysninger eller reelle selskapsdata.
   * Konto 3000: IB 0 + (0 - 200 000) = -200 000 (0,00 i avvik)
   * Konto 4000: IB 0 + (60 000 - 0) = 60 000 (0,00 i avvik)
   * Konto 5000: IB 0 + (30 000 - 0) = 30 000 (0,00 i avvik)
-  * **Resultat:** 100 % konsistent. Ingen avvik flagges.
-
+### `saldobalanse_norsk_semikolon.csv`
+* **Innhold:** Saldobalanse i typisk norsk ERP-format (semikolon som skilletegn `;`, `Kontonr` i stedet for `Konto`, `Beskrivelse` i stedet for `Kontonavn`, og desimalkomma med tusenskilletegn, f.eks. `100 000,00`).
+* **Hensikt:** Bevise at applikasjonen er skuddsikker mot særnorske eksportformater fra Tripletex og Fiken.
+* **Kjent fasit:** Parsingen normaliserer automatisk kolonnene, konverterer tallene til float, og summerer nøyaktig til Debet 530 000,00 NOK og Kredit 530 000,00 NOK.
 ---
 
 ## 2. Testfiler med bevisste feil (Negative Testing)

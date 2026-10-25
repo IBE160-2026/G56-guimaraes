@@ -7,88 +7,141 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 def generate_management_pdf(company_name: str, ai_report, ns4102_summary: dict = None) -> io.BytesIO:
     """
     TOP 10% TYPOGRAPHY PATTERN:
-    Genererer en piksel-perfekt PDF-rapport utelukkende in-memory (CISO krav).
-    Mottar strukturerte Pydantic-objekter fra LLM-integrasjonen.
+    Genererer en formell, profesjonell styrepakke (PDF) direkte in-memory.
+    Rendrer dype CFO-analyser, marginer, arbeidskapital og revisors avstemmingsstatus.
     """
     buffer = io.BytesIO()
     
-    # Sett opp PDF-dokument
     doc = SimpleDocTemplate(
         buffer, 
         pagesize=A4,
-        rightMargin=50, 
-        leftMargin=50, 
-        topMargin=50, 
-        bottomMargin=50
+        rightMargin=40, 
+        leftMargin=40, 
+        topMargin=40, 
+        bottomMargin=40
     )
     
-    # Hent standardstiler
     styles = getSampleStyleSheet()
     
-    # Skreddersydde stiler for styrepakken
+    # Skreddersydde typografistiler
     title_style = ParagraphStyle(
-        'TitleStyle', 
+        'MainTitle', 
         parent=styles['Heading1'], 
-        fontSize=24, 
-        spaceAfter=20,
-        textColor=colors.HexColor("#1e3a8a") # Mørk blå for profesjonelt utseende
+        fontSize=20, 
+        spaceAfter=5,
+        textColor=colors.HexColor("#1e3a8a"),
+        fontName="Helvetica-Bold"
     )
     
-    heading_style = ParagraphStyle(
-        'HeadingStyle', 
+    subtitle_style = ParagraphStyle(
+        'Subtitle',
+        parent=styles['Normal'],
+        fontSize=10,
+        textColor=colors.HexColor("#64748b"),
+        spaceAfter=15
+    )
+    
+    section_heading = ParagraphStyle(
+        'SectionHeading', 
         parent=styles['Heading2'], 
-        fontSize=14, 
-        spaceBefore=20, 
-        spaceAfter=10,
+        fontSize=12, 
+        spaceBefore=12, 
+        spaceAfter=6,
+        textColor=colors.HexColor("#0f172a"),
+        fontName="Helvetica-Bold"
+    )
+    
+    body_style = ParagraphStyle(
+        'Body',
+        parent=styles['Normal'],
+        fontSize=9.5,
+        leading=13,
         textColor=colors.HexColor("#334155")
     )
     
-    normal_style = styles['Normal']
-    normal_style.fontSize = 11
-    normal_style.leading = 14
+    callout_style = ParagraphStyle(
+        'Callout',
+        parent=styles['Normal'],
+        fontSize=10,
+        leading=14,
+        textColor=colors.HexColor("#1e3a8a"),
+        fontName="Helvetica-Bold"
+    )
     
     elements = []
     
-    # 1. Tittel og Header
-    elements.append(Paragraph(f"Ledelsesrapport: {company_name}", title_style))
-    elements.append(Paragraph("Autogenerert av KI-Revisor Plattform", styles['Italic']))
-    elements.append(Spacer(1, 20))
+    # 1. Header
+    elements.append(Paragraph(f"Styrepakke & Ledelsesrapport: {company_name}", title_style))
+    elements.append(Paragraph("Utarbeidet med KI-Revisor • Basert på NS 4102 Kontoplan og Kryssavstemt Hovedbok", subtitle_style))
+    elements.append(Spacer(1, 5))
     
-    # 2. Økonomisk Sammendrag
-    elements.append(Paragraph("Økonomisk Sammendrag", heading_style))
-    elements.append(Paragraph(ai_report.okonomisk_sammendrag, normal_style))
-    elements.append(Spacer(1, 15))
+    # 2. Hovedkonklusjon (Callout box)
+    callout_data = [[Paragraph(f"<b>Hovedkonklusjon til Styret:</b><br/>{ai_report.hovedkonklusjon}", callout_style)]]
+    callout_table = Table(callout_data, colWidths=[515])
+    callout_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#eff6ff")),
+        ('BOX', (0, 0), (-1, -1), 1, colors.HexColor("#3b82f6")),
+        ('TOPPADDING', (0, 0), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ('LEFTPADDING', (0, 0), (-1, -1), 10),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+    ]))
+    elements.append(callout_table)
+    elements.append(Spacer(1, 10))
     
-    # 3. Potensielle Avvik (Faresignaler)
-    elements.append(Paragraph("Faresignaler og Potensielle Avvik", heading_style))
+    # 3. Lønnsomhet & Marginer
+    elements.append(Paragraph("1. Lønnsomhets- og Marginanalyse", section_heading))
+    elements.append(Paragraph(ai_report.lonnsomhet_og_marginer, body_style))
+    elements.append(Spacer(1, 8))
+    
+    # 4. Likviditet og Arbeidskapital
+    elements.append(Paragraph("2. Likviditetsvurdering og Arbeidskapital", section_heading))
+    elements.append(Paragraph(ai_report.likviditet_og_arbeidskapital, body_style))
+    elements.append(Spacer(1, 8))
+    
+    # 5. Revisors Avstemmingsnotat
+    elements.append(Paragraph("3. Revisors Avstemmingsnotat (Internkontroll)", section_heading))
+    elements.append(Paragraph(ai_report.revisors_avstemmingsnotat, body_style))
+    elements.append(Spacer(1, 8))
+    
+    # 6. Faresignaler og Potensielle Avvik
+    elements.append(Paragraph("4. Identifiserte Faresignaler & Avvik", section_heading))
     for avvik in ai_report.potensielle_avvik:
-        bullet_text = f"• <font color='red'>{avvik}</font>"
-        elements.append(Paragraph(bullet_text, normal_style))
-    elements.append(Spacer(1, 15))
+        elements.append(Paragraph(f"• <font color='#b91c1c'>{avvik}</font>", body_style))
+    elements.append(Spacer(1, 10))
     
-    # 4. Strategisk Tiltaksliste (Tabell)
-    elements.append(Paragraph("Strategisk Tiltaksliste", heading_style))
+    # 7. Strategisk Tiltaksliste
+    elements.append(Paragraph("5. Strategisk Tiltaksliste for Ledelsen", section_heading))
     
-    table_data = [["Prioritet", "Anbefalt Tiltak"]]
-    for tiltak in ai_report.tiltaksliste:
-        table_data.append([tiltak.prioritet, tiltak.tiltak])
+    table_data = [
+        [
+            Paragraph("<b>Prioritet</b>", body_style),
+            Paragraph("<b>Anbefalt Tiltak</b>", body_style),
+            Paragraph("<b>Begrunnelse</b>", body_style),
+            Paragraph("<b>Forventet Effekt</b>", body_style)
+        ]
+    ]
+    
+    for item in ai_report.tiltaksliste:
+        prio_color = "#b91c1c" if item.prioritet == "Høy" else ("#d97706" if item.prioritet == "Medium" else "#16a34a")
+        table_data.append([
+            Paragraph(f"<font color='{prio_color}'><b>{item.prioritet}</b></font>", body_style),
+            Paragraph(item.tiltak, body_style),
+            Paragraph(getattr(item, 'begrunnelse', '-'), body_style),
+            Paragraph(getattr(item, 'forventet_effekt', '-'), body_style)
+        ])
         
-    t = Table(table_data, colWidths=[80, 400])
+    t = Table(table_data, colWidths=[65, 170, 140, 140])
     t.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#f1f5f9")),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor("#0f172a")),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.white),
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1"))
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
     ]))
-    
     elements.append(t)
     
-    # Bygg PDF-en i minnet
+    # Bygg PDF
     doc.build(elements)
-    
-    # Resett pekeren i bufferet
     buffer.seek(0)
     return buffer
