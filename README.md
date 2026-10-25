@@ -129,12 +129,24 @@ For å sikre full sporbarhet fra idé og krav til ferdig kode og kvalitetssikrin
 
 ```text
 G56-guimaraes/
+├── .agents/skills/                     # Gemini Antigravity Skills (BMAD roller & prosedyrer)
+├── .claude/skills/                     # Claude Code Skills (speiling for full kompatibilitet)
+├── .github/workflows/ci.yml           # GitHub Actions automatisert testkjøring (CI)
+├── .githooks/pre-push                  # Lokal git hook for forhåndstesting før push
+├── _bmad/                              # BMAD rammeverkmoduler (_config, bmm, cis, core, custom)
+├── _bmad-output/                       # BMAD verifikasjonslogg og statusrapporter
+├── ai-log/                             # KI-styringslogger og prompthistorikk (Kriterium 1)
+├── scripts/                            # Hjelpeskript for oppstart og testkjøring
 ├── app.py                              # Hovedinngangspunkt for Streamlit (rot)
+├── AGENTS.md                           # Felles agentinstruksjoner (Norsk språk, BMAD-regler)
+├── CLAUDE.md                           # Claude agentkonfigurasjon
+├── GEMINI.md                           # Gemini Antigravity prosjektregler
+├── .gitattributes                      # Konsistente linjeskift (LF) på tvers av OS
 ├── requirements.txt                    # Nødvendige Python-avhengigheter
 ├── .env.example                        # Mal for API-nøkler (ingen hemmeligheter)
 ├── .gitignore                          # Ekskluderer venv, cache og hemmeligheter
 ├── README.md                           # Denne veiledningen
-├── product-brief.md                    # Revidert Product Brief
+├── product-brief.md                    # Revidert Product Brief (Kjerneversjon: SB + HB)
 ├── prosjektplan.md                     # Fremdriftsplan for semesteret
 ├── course/                             # Kursdokumentasjon og sensorveiledning
 │   ├── sensorveiledning.md             # Eksamensveiledning Del 1 (70%)

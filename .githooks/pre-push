@@ -1,0 +1,25 @@
+#!/bin/sh
+# Git pre-push hook for G56-guimaraes
+# Verifiserer at alle enhetstester passerer før push til GitHub
+
+echo "=========================================="
+echo "🛡️ Kjører forhåndskontroll før push (pytest)..."
+echo "=========================================="
+
+if [ -f "./.venv/Scripts/pytest.exe" ]; then
+    ./.venv/Scripts/pytest -v tests/
+elif command -v pytest >/dev/null 2>&1; then
+    pytest -v tests/
+else
+    echo "⚠️ Pytest ikke funnet i PATH eller venv. Skipper testkjøring."
+    exit 0
+fi
+
+RESULT=$?
+if [ $RESULT -ne 0 ]; then
+    echo "❌ Testsuiten feilet! Push ble avbrutt for å beskytte main-grenen."
+    exit 1
+fi
+
+echo "✅ Alle tester godkjent! Fortsetter med push."
+exit 0
