@@ -1,72 +1,176 @@
 import pandas as pd
 import io
-import xml.etree.ElementTree as ET
+import re
+
+def detect_csv_delimiter_and_encoding(file_bytes: bytes) -> tuple[str, str]:
+    """
+    Autodetekterer skilletegn (; vs , vs tab) og tegnsett (utf-8, utf-8-sig, latin1).
+    Norske ERP-systemer som Fiken og Tripletex eksporterer ofte semikolon-separerte CSV-er.
+    """
+    # 1. Prøv vanlige tegnsett for norske regnskapsdata
+    encoding = 'utf-8-sig'
+    try:
+        sample_text = file_bytes[:8192].decode('utf-8-sig')
+    except UnicodeDecodeError:
+        try:
+            sample_text = file_bytes[:8192].decode('utf-8')
+            encoding = 'utf-8'
+        except UnicodeDecodeError:
+            sample_text = file_bytes[:8192].decode('latin1', errors='replace')
+            encoding = 'latin1'
+            
+    # 2. Tell forekomster på første linje (header)
+    first_line = sample_text.split('\n')[0] if sample_text else ""
+    semicolon_count = first_line.count(';')
+    comma_count = first_line.count(',')
+    tab_count = first_line.count('\t')
+    
+    if semicolon_count > comma_count and semicolon_count > tab_count:
+        delimiter = ';'
+    elif tab_count > comma_count and tab_count > semicolon_count:
+        delimiter = '\t'
+    else:
+        delimiter = ','
+        
+    return delimiter, encoding
+
+def normalize_column_names(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Normaliserer typiske norske og engelske kolonnenavn til standard konvensjoner:
+    - 'Kontonr', 'Konto nr', 'Account', 'AccountID' -> 'Konto'
+    - 'Kontonavn', 'Beskrivelse', 'AccountName' -> 'Kontonavn'
+    - 'Debit' -> 'Debet'
+    - 'Credit' -> 'Kredit'
+    - 'Inngående balanse', 'Opening Balance' -> 'IB'
+    - 'Utgående balanse', 'Closing Balance' -> 'UB'
+    """
+    column_mapping = {}
+    for col in df.columns:
+        clean_col = str(col).strip().lower()
+        if clean_col in ['kontonr', 'konto nr', 'kontonummer', 'account', 'accountid', 'account_id', 'konto_nr']:
+            column_mapping[col] = 'Konto'
+        elif clean_col in ['kontonavn', 'konto navn', 'kontobeskrivelse', 'accountname', 'account_name', 'beskrivelse', 'tekst']:
+            column_mapping[col] = 'Kontonavn'
+        elif clean_col in ['debit']:
+            column_mapping[col] = 'Debet'
+        elif clean_col in ['credit']:
+            column_mapping[col] = 'Kredit'
+        elif clean_col in ['inngående balanse', 'inngående', 'opening balance', 'opening_balance', 'ib_beløp']:
+            column_mapping[col] = 'IB'
+        elif clean_col in ['utgående balanse', 'utgående', 'closing balance', 'closing_balance', 'ub_beløp']:
+            column_mapping[col] = 'UB'
+            
+    if column_mapping:
+        df = df.rename(columns=column_mapping)
+        
+    return df
+
+def clean_norwegian_numeric_series(series: pd.Series) -> pd.Series:
+    """
+    Håndterer norske tallformater med desimalkomma og tusenskilletegn (f.eks. '15 000,50' eller '15.000,50').
+    Konverterer trygt til float.
+    """
+    if pd.api.types.is_numeric_dtype(series):
+        return pd.to_numeric(series, errors='coerce').fillna(0.0)
+        
+    def parse_norwegian_num(val):
+        if pd.isna(val) or val == '':
+            return 0.0
+        val_str = str(val).strip()
+        # Fjern vanlige tusenskilletegn (mellomrom, hardt mellomrom, apostrof)
+        val_str = val_str.replace('\xa0', '').replace(' ', '').replace("'", "")
+        
+        # Hvis både punktum og komma finnes: '15.000,50' -> '15000.50'
+        if '.' in val_str and ',' in val_str:
+            val_str = val_str.replace('.', '').replace(',', '.')
+        elif ',' in val_str:
+            # Kun komma: '15000,50' -> '15000.50'
+            val_str = val_str.replace(',', '.')
+            
+        try:
+            return float(val_str)
+        except ValueError:
+            return 0.0
+
+    return series.apply(parse_norwegian_num)
 
 def process_csv_in_memory(file_buffer: io.BytesIO, filename: str) -> pd.DataFrame:
     """
-    Sikker in-memory prosessering av CSV-filer.
-    Laster filen direkte inn i Pandas DataFrame uten å berøre disken.
+    Skuddsikker in-memory CSV-leser for norske regnskapsdata:
+    - Autodetekterer komma vs semikolon.
+    - Håndterer desimalkomma (1000,50).
+    - Normaliserer kolonnenavn (f.eks. Kontonr -> Konto).
+    - Validerer at påkrevde kolonner finnes, med vennlige feilmeldinger.
     """
     try:
-        # Laster filen fra buffer
-        df = pd.read_csv(file_buffer)
-        return df
-    except Exception as e:
-        raise ValueError(f"Kunne ikke parse CSV-filen {filename}: {e}")
-
-def process_excel_in_memory(file_buffer: io.BytesIO, filename: str) -> dict:
-    """
-    In-memory prosessering av Excel-filer. Returnerer en dict med ark-navn og DataFrames.
-    """
-    try:
-        # Laster filen fra buffer (krever openpyxl for .xlsx)
-        df_dict = pd.read_excel(file_buffer, sheet_name=None)
-        return df_dict
-    except Exception as e:
-        raise ValueError(f"Kunne ikke parse Excel-filen {filename}: {e}")
-
-def parse_saft_xml_iterative(file_buffer: io.BytesIO) -> dict:
-    """
-    TOP 10% ELITE DATA PIPELINE PATTERN:
-    Iterativ parsing av SAF-T XML (Standard Audit File - Tax).
-    Bruk av iterparse forhindrer minnelekkasjer på filer opp mot flere Gigabyte.
-    Extracter grunnleggende metadata og kontoinformasjon som en start.
-    """
-    metadata = {}
-    accounts = []
-    
-    # iterparse lar oss lese XML-noder en etter en uten å laste hele treet i RAM
-    context = ET.iterparse(file_buffer, events=("start", "end"))
-    
-    try:
-        for event, elem in context:
-            # Fjern namespace for enklere tag-matching
-            tag = elem.tag.split('}')[-1]
+        raw_bytes = file_buffer.getvalue()
+        if not raw_bytes or len(raw_bytes.strip()) == 0:
+            raise ValueError(f"Filen '{filename}' er tom.")
             
-            if event == "end" and tag == "Company":
-                # Eksempel: Trekker ut selskapsnavn
-                name_elem = elem.find('.//*Name')
-                if name_elem is not None:
-                    metadata['CompanyName'] = name_elem.text
-            
-            elif event == "end" and tag == "Account":
-                # Eksempel: Trekker ut kontodetaljer fra MasterFiles
-                account_id = elem.find('.//*AccountID')
-                account_desc = elem.find('.//*AccountDescription')
-                if account_id is not None and account_desc is not None:
-                    accounts.append({
-                        "AccountID": account_id.text,
-                        "Description": account_desc.text
-                    })
-            
-            # Frigjør minne kontinuerlig for å bevare RAM
-            if event == "end":
-                elem.clear()
-                
-    except ET.ParseError as e:
-        raise ValueError(f"Ugyldig eller korrupt SAF-T XML struktur: {e}")
+        delimiter, encoding = detect_csv_delimiter_and_encoding(raw_bytes)
         
-    return {
-        "metadata": metadata,
-        "accounts_preview": pd.DataFrame(accounts).head(10) if accounts else pd.DataFrame()
-    }
+        # Les inn med Pandas
+        file_buffer.seek(0)
+        df = pd.read_csv(
+            file_buffer,
+            sep=delimiter,
+            encoding=encoding,
+            dtype=str  # Laster først inn som strenger for å bevare kontonumre med ledende nuller og rense tallformat
+        )
+        
+        # 1. Normaliser kolonnenavn
+        df = normalize_column_names(df)
+        
+        # 2. Fjern eventuelle tomme rader
+        df = df.dropna(how='all')
+        
+        # 3. Valider obligatorisk kolonne
+        if 'Konto' not in df.columns:
+            funnede_kolonner = ", ".join([f"'{c}'" for c in df.columns])
+            raise ValueError(
+                f"Filen '{filename}' mangler den påkrevde kolonnen 'Konto' (eller 'Kontonr'). "
+                f"Fant følgende kolonner: [{funnede_kolonner}]. Vennligst kontroller filformatet."
+            )
+            
+        # 4. Rens numeriske kolonner dersom de finnes
+        for num_col in ['Debet', 'Kredit', 'IB', 'UB']:
+            if num_col in df.columns:
+                df[num_col] = clean_norwegian_numeric_series(df[num_col])
+                
+        # 5. Sørg for at Konto forblir streng
+        df['Konto'] = df['Konto'].astype(str).str.strip()
+        
+        return df
+
+    except ValueError as ve:
+        raise ve
+    except Exception as e:
+        raise ValueError(f"Kunne ikke lese CSV-filen '{filename}': {e}")
+
+def process_excel_in_memory(file_buffer: io.BytesIO, filename: str) -> dict[str, pd.DataFrame]:
+    """
+    In-memory prosessering av Excel-filer (.xlsx).
+    Normaliserer og vasker tallkolonner på samme måte som CSV.
+    """
+    try:
+        raw_bytes = file_buffer.getvalue()
+        if not raw_bytes or len(raw_bytes) == 0:
+            raise ValueError(f"Excel-filen '{filename}' er tom.")
+            
+        file_buffer.seek(0)
+        df_dict = pd.read_excel(file_buffer, sheet_name=None, dtype=str)
+        
+        cleaned_dict = {}
+        for sheet_name, df in df_dict.items():
+            df = normalize_column_names(df)
+            df = df.dropna(how='all')
+            for num_col in ['Debet', 'Kredit', 'IB', 'UB']:
+                if num_col in df.columns:
+                    df[num_col] = clean_norwegian_numeric_series(df[num_col])
+            if 'Konto' in df.columns:
+                df['Konto'] = df['Konto'].astype(str).str.strip()
+            cleaned_dict[sheet_name] = df
+            
+        return cleaned_dict
+    except Exception as e:
+        raise ValueError(f"Kunne ikke lese Excel-filen '{filename}': {e}")
