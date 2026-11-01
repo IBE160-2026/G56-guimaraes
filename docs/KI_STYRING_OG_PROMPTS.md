@@ -13,11 +13,11 @@ Et av de viktigste arkitektoniske og metodiske valgene i prosjektet har vært å
 * **Sikker sone (Deterministisk):** Matematikk, balansekontroll ($\sum \text{Debet} = \sum \text{Kredit}$), kryssavstemming ($IB + \Delta HB = UB$) og kontoplanmapping (NS 4102) utføres **utelukkende i Python/Pandas**. Ingen språkmodell har tillatelse til å regne eller gjette tall.
 * **Probabilistisk sone (Tekstlig formidling):** Språkmodellen (OpenAI `gpt-4o-mini`) mottar utelukkende ferdig aggregerte nøkkeltall og ferdigkalkulerte avvik, og brukes eksklusivt til forretningsmessig tekstformulering og strategisk rådgivning på formelt norsk.
 
-Dette eliminerer 100 % av risikoen for tallhallusinasjoner i finansielle nøkkeltall.
+Arkitekturen reduserer risikoen for tallhallusinasjoner ved at alle økonomiske beregninger utføres deterministisk i Python. KI-modellen har kun ansvar for tekstlig analyse og formidling. Det anerkjennes likevel at KI-modeller har iboende begrensninger knyttet til teksttolkning, og at de kan gi ufullstendige eller uhensiktsmessige strategiske anbefalinger dersom de ikke overvåkes av en kvalifisert bruker (Human-in-the-loop).
 
 ---
 
-## 2. Fire Konkrete Eksempler på Kritisk Styring og Korrigering av KI
+## 2. Fem Konkrete Eksempler på Kritisk Styring og Korrigering av KI
 
 Sensorveiledningen legger avgjørende vekt på at gruppen ikke bare aksepterer KI-forslag ukritisk, men aktivt vurderer, korrigerer og styrer KI. Her er fire sentrale iterasjoner:
 
@@ -68,6 +68,7 @@ STRENGE REGLER (GOVERNANCE):
 ### B. User Prompt Payload (Strukturert JSON)
 ```text
 Her er fullstendig verifiserte regnskapsdata og avstemmingsresultat for perioden:
+*(Merk: Nedenforstående tall er et syntetisk eksempel fra testdatasettet `data/sample/saldobalanse_balansert.csv` for å demonstrere payload-strukturen, ikke faste produksjonstall).*
 
 ```json
 {
@@ -118,4 +119,4 @@ flowchart LR
 2. **`02_product/PRD.md`:** 4 Epics, 7 User Stories, funksjonelle formelkrav ($IB + HB = UB$) og testmatrise (Definition of Done).
 3. **`03_ux/`:** Wireframes, informasjonsarkitektur og universell utforming for Streamlit-dashbordet.
 4. **`04_architecture/ARCHITECTURE.md`:** Dataflyt, AI Firewall, systemgrenser og mock-arkitektur.
-5. **`tests/`:** 13 automatiserte tester som verifiserer koden mot PRD-kravene.
+5. **`tests/`:** 26 automatiserte tester som verifiserer koden mot PRD-kravene.

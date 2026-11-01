@@ -61,19 +61,19 @@ Applikasjonen er designet for å kunne evalueres raskt og feilfritt på enhver m
 
 ### 1. Klon repositoriet og naviger til mappen
 ```bash
-git clone https://github.com/ditt-brukernavn/G56-guimaraes.git
+git clone https://github.com/IBE160-2026/G56-guimaraes.git
 cd G56-guimaraes
 ```
 
 ### 2. Opprett virtuelt miljø og installer avhengigheter
 ```bash
 # Opprett virtuelt miljø
-python -m venv venv
+python -m venv .venv
 
 # Aktiver miljøet (Windows PowerShell)
-.\venv\Scripts\Activate.ps1
+.\.venv\Scripts\Activate.ps1
 # ELLER (macOS / Linux)
-# source venv/bin/activate
+# source .venv/bin/activate
 
 # Installer nødvendige pakker
 pip install -r requirements.txt
@@ -84,7 +84,7 @@ Du kan starte appen med én enkel kommando fra rotmappen:
 ```bash
 streamlit run app.py
 ```
-*(Alternativt: `streamlit run src/app.py`)*
+*(Merk: `app.py` i rotmappen er startpunktet som automatisk ruter til `src/app.py` med korrekte miljøstier).*
 
 Applikasjonen åpner seg automatisk i nettleseren din på `http://localhost:8501`.
 
@@ -126,12 +126,12 @@ For å sikre full sporbarhet fra idé og krav til ferdig kode og kvalitetssikrin
 * 📋 **[planning-artifacts/briefs/brief-prompt/](./planning-artifacts/briefs/brief-prompt/)**: *(BMAD Planleggingsartefakter)*
   * Inneholder `brief.md`, `tilbakemelding-product-brief.md`, `addendum.md`, `ki-logg.md` og `.memlog.md`.
 * 📄 **[docs/KI_STYRING_OG_PROMPTS.md](./docs/KI_STYRING_OG_PROMPTS.md)**: *(Sensorveiledning Kriterium 1 - 30 %)*
-  * Dokumentasjon av hvordan gruppen har styrt, korrigert og forbedret KI gjennom fire iterasjoner.
+  * Dokumentasjon av hvordan gruppen har styrt, korrigert og forbedret KI gjennom fem iterasjoner.
   * Fullstendig oversikt over system- og brukerprompts, hyperparametre og governance-regler.
 * 📄 **[docs/01_analysis/AVVIK_FRA_PROPOSAL.md](./docs/01_analysis/AVVIK_FRA_PROPOSAL.md)**: *(Sensorveiledning Kriterium 2 - 20 %)*
   * Begrunnelse for omfangsjustering fra opprinnelig proposal til v1 etter faglærers tilbakemelding.
 * 📄 **[docs/KVALITETSSIKRING_OG_TESTING.md](./docs/KVALITETSSIKRING_OG_TESTING.md)**: *(Sensorveiledning Kriterium 3 - 15 %)*
-  * Dokumentasjon av alle 13 enhetstester i pytest.
+  * Dokumentasjon av alle 26 enhetstester i pytest.
   * Tre konkrete eksempler på feil avdekket i KI-generert kode og hvordan de ble rettet (Code Review).
 * 📄 **[docs/03_ux/UX_DESIGN_OG_WIREFRAMES.md](./docs/03_ux/UX_DESIGN_OG_WIREFRAMES.md)**: *(Sensorveiledning Kriterium 4 - 10 %)*
   * Brukerreise for daglig leder, ASCII-wireframes, fargehierarki og universell utforming (WCAG).
