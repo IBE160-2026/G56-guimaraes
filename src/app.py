@@ -132,6 +132,14 @@ if sb_df is not None and hb_df is not None:
         col_m3.metric("Driftsresultat (EBIT)", f"{ebit:,.0f} NOK")
         col_m4.metric("Driftsmargin", f"{margin:.1f} %")
         
+        # Visuell graf: Hovedstørrelser i resultatet
+        with st.expander("📊 Vis grafisk resultatfordeling", expanded=False):
+            chart_df = pd.DataFrame({
+                "Finansiell Post": ["Driftsinntekter", "Driftskostnader", "Driftsresultat (EBIT)"],
+                "Beløp (NOK)": [float(driftsinntekter), float(driftskostnader), float(ebit)]
+            }).set_index("Finansiell Post")
+            st.bar_chart(chart_df)
+        
         # KI Analyse
         if st.button("🚀 Generer Strategisk Ledelsesrapport (KI)", type="primary"):
             with st.spinner("CFO-Agent analyserer regnskapet og avstemmingsgrunnlaget..."):

@@ -10,7 +10,7 @@ Språk for all dokumentasjon, brukergrensesnitt og agent-dialog: **Norsk (Bokmå
 ## 🏛️ BMAD Roller og Agent-ferdigheter (AiDD)
 
 Prosjektet benytter **BMAD-metodologien** (Business, Market, Architecture, Design).
-Ferdighetene er implementert i både `.agents/skills/` (for Gemini Antigravity) og `.claude/skills/` (for Claude Code):
+Ferdighetene er implementert i `.agents/skills/` (for Gemini Antigravity):
 
 * **Analyst (`bmad-agent-analyst`):** Domeneanalyse, regnskapsregler, NS 4102-kontoplan og faglærers føringer.
 * **PM (`bmad-agent-pm`):** Produktledelse, PRD, scoping, Epics og User Stories med akseptansekriterier.

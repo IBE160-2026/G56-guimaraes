@@ -7,9 +7,31 @@ import pandas as pd
 # Legger src-mappen til i system path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 
-from data_pipeline import process_csv_in_memory, detect_csv_delimiter_and_encoding, clean_norwegian_numeric_series
+from data_pipeline import process_csv_in_memory, process_excel_in_memory, detect_csv_delimiter_and_encoding, clean_norwegian_numeric_series
 
 class TestDataPipelineEdgeCases:
+
+    def test_excel_file_processing(self):
+        """Tester at in-memory Excel-filer (.xlsx) leses og normaliseres korrekt."""
+        # Opprett et test-Excel ark i minnet
+        df_sample = pd.DataFrame({
+            'Kontonummer': ['3000', '4000'],
+            'Kontonavn': ['Salgsinntekter', 'Varekostnad'],
+            'Debet': ['0,00', '40 000,00'],
+            'Kredit': ['100 000,00', '0,00']
+        })
+        excel_buffer = io.BytesIO()
+        with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
+            df_sample.to_excel(writer, index=False, sheet_name='Saldobalanse')
+            
+        excel_buffer.seek(0)
+        res_dict = process_excel_in_memory(excel_buffer, "test_saldobalanse.xlsx")
+        
+        assert 'Saldobalanse' in res_dict
+        sheet_df = res_dict['Saldobalanse']
+        assert 'Konto' in sheet_df.columns
+        assert sheet_df['Kredit'].sum() == 100000.0
+        assert sheet_df['Debet'].sum() == 40000.0
 
     def test_norwegian_semicolon_and_comma_decimal(self):
         """Tester at en typisk norsk regnskaps-CSV (semikolon, Kontonr, desimalkomma, tusenskilletegn) parses feilfritt."""

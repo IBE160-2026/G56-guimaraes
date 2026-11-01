@@ -2,7 +2,7 @@
 
 * **Prosjekt:** G56 – Ledelsesrapport og forenklet kontroll av regnskap med KI
 * **Emne:** IBE160 Programmering med KI (Del 1: Applikasjon og prosess)
-* **Formål:** Dokumentere en etterprøvbar prosess der gruppen bevisst har styrt, korrigert og kvalitetssikret KI-verktøyene (BMAD, Google Antigravity / Claude Code og LLM API).
+* **Formål:** Dokumentere en etterprøvbar prosess der gruppen bevisst har styrt, korrigert og kvalitetssikret KI-verktøyene (BMAD, Google Gemini Antigravity og LLM API).
 
 ---
 

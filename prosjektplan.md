@@ -14,7 +14,7 @@ Dette er fremdriftsplanen for utviklingen av vår applikasjon gjennom høstsemes
 
 ## Uke 38 (14.09 – 20.09): Agentic Programming
 * **Hva gjøres:** Teoretisk og praktisk innføring i Agentic Programming – inkludert context engineering og CLI-baserte kodingsagenter.
-* **Bruk i prosjektet:** Vi forbereder delegering av implementasjonsoppgaver til KI-agenter (Google Antigravity / Claude Code). Vi etablerer regler for at KI-en kun skal bygge kode etter spesifikasjonene i BMAD-artefaktene.
+* **Bruk i prosjektet:** Vi forbereder delegering av implementasjonsoppgaver til KI-agenter (Google Gemini Antigravity). Vi etablerer regler for at KI-en kun skal bygge kode etter spesifikasjonene i BMAD-artefaktene.
 
 ## Uke 39–40 (21.09 – 04.10): Context Engineering & LLM som resonneringsmotor
 * **Hva gjøres:** Dypdykk i hvordan Large Language Models (LLMs) fungerer som resonneringsmotorer, prompt engineering, strukturerte utdata (JSON/Pydantic) og governance.

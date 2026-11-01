@@ -1,6 +1,6 @@
 # AI Logg og Prompting-Historikk (IBE160 Kriterium 1)
 
-Denne mappen inneholder dokumentasjon av hvordan studenten har styrt, korrigert og samhandlet med kunstig intelligens (Claude Code og Gemini Antigravity) gjennom prosjektets livsløp.
+Denne mappen inneholder dokumentasjon av hvordan studenten har styrt, korrigert og samhandlet med kunstig intelligens (Gemini Antigravity og LLM) gjennom prosjektets livsløp.
 
 Dette adresserer direkte **Kriterium 1 i sensorveiledningen (30 % vekting: Prosess og KI-styring)**:
 * Bruk av relevante prompts og hyperparametre.

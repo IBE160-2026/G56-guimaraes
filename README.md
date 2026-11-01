@@ -130,7 +130,6 @@ For å sikre full sporbarhet fra idé og krav til ferdig kode og kvalitetssikrin
 ```text
 G56-guimaraes/
 ├── .agents/skills/                     # Gemini Antigravity Skills (BMAD roller & prosedyrer)
-├── .claude/skills/                     # Claude Code Skills (speiling for full kompatibilitet)
 ├── .github/workflows/ci.yml           # GitHub Actions automatisert testkjøring (CI)
 ├── .githooks/pre-push                  # Lokal git hook for forhåndstesting før push
 ├── _bmad/                              # BMAD rammeverkmoduler (_config, bmm, cis, core, custom)
@@ -139,8 +138,7 @@ G56-guimaraes/
 ├── scripts/                            # Hjelpeskript for oppstart og testkjøring
 ├── app.py                              # Hovedinngangspunkt for Streamlit (rot)
 ├── AGENTS.md                           # Felles agentinstruksjoner (Norsk språk, BMAD-regler)
-├── CLAUDE.md                           # Claude agentkonfigurasjon
-├── GEMINI.md                           # Gemini Antigravity prosjektregler
+├── GEMINI.md                           # Gemini Antigravity prosjektregler ("The AI Firewall")
 ├── .gitattributes                      # Konsistente linjeskift (LF) på tvers av OS
 ├── requirements.txt                    # Nødvendige Python-avhengigheter
 ├── .env.example                        # Mal for API-nøkler (ingen hemmeligheter)

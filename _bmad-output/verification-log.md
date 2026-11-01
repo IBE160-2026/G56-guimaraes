@@ -1,8 +1,8 @@
 # BMAD Output & Verification Log
 
 **Prosjekt:** G56 — Ledelsesrapport og regnskapskontroll med KI  
-**Framework:** BMAD v6.0 (Gemini Antigravity & Claude Code)  
-**Status:** All Stories Verified ✅ (13/13 enhetstester bestått)
+**Framework:** BMAD v6.0 (Gemini Antigravity)  
+**Status:** All Stories Verified ✅ (14/14 enhetstester bestått)
 
 ---
 
@@ -10,7 +10,7 @@
 
 | Story | Tittel | Status | Verifikasjonsmetode |
 | :--- | :--- | :--- | :--- |
-| **Story 1.1** | Filopplasting & Deteksjon av Norsk CSV | ✅ Fullført | `tests/test_data_pipeline.py` (Semikolon, desimalkomma, koding) |
+| **Story 1.1** | Filopplasting & Deteksjon av Norsk CSV & Excel | ✅ Fullført | `tests/test_data_pipeline.py` (Semikolon, desimalkomma, koding, .xlsx) |
 | **Story 2.1** | Dobbelt Bokføringskontroll ($\sum D = \sum K$) | ✅ Fullført | `tests/test_compliance.py::test_validate_balance_failure` |
 | **Story 2.2** | Kryssavstemming HB mot SB ($IB + \Delta HB = UB$) | ✅ Fullført | `tests/test_compliance.py::test_reconciliation_detects_discrepancy` |
 | **Story 2.3** | Mapping mot Norsk Standard Kontoplan (NS 4102) | ✅ Fullført | `tests/test_compliance.py::test_ns4102_mapping` |
