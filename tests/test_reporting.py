@@ -68,3 +68,27 @@ class TestReportingAndExport:
         # Sjekk at PDF-en ikke er tom og har gyldige magic bytes
         assert len(pdf_bytes) > 1000
         assert pdf_bytes.startswith(b"%PDF-")
+
+    def test_ai_firewall_context_never_contains_raw_transactions(self, sample_mapped_df):
+        """Tester The AI Firewall: Sjekker at payloaden kun inneholder aggregerte tall, aldri råtransaksjoner."""
+        from llm_integration import build_financial_context
+        recon_mock = {"is_reconciled": True, "discrepancy_count": 0}
+        ctx = build_financial_context(sample_mapped_df, recon_mock)
+        
+        assert "raw_transactions" not in ctx
+        assert "nokkeltall" in ctx
+        assert "Driftsresultat_EBIT_NOK" in ctx["nokkeltall"]
+        # EBIT må være deterministisk utregnet (200000 - 90000 = 110000)
+        assert ctx["nokkeltall"]["Driftsresultat_EBIT_NOK"] == 110000.0
+
+    def test_pydantic_schema_consistency_between_mock_and_class(self, sample_mapped_df):
+        """Tester at mock-KI produserer 100 % samsvarende Pydantic-skjema som forventet av API."""
+        recon_mock = {"is_reconciled": True, "discrepancy_count": 0}
+        report = generate_management_report(sample_mapped_df, recon_result=recon_mock, mock_mode=True)
+        dumped = report.model_dump()
+        
+        required_keys = {
+            "hovedkonklusjon", "lonnsomhet_og_marginer", "likviditet_og_arbeidskapital",
+            "revisors_avstemmingsnotat", "potensielle_avvik", "tiltaksliste"
+        }
+        assert required_keys.issubset(dumped.keys())

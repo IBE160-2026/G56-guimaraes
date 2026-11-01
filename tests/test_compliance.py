@@ -84,3 +84,39 @@ class TestComplianceEngine:
         assert map_to_ns4102('5000') == "Driftskostnader (NS 4102)"
         assert map_to_ns4102('8000') == "Finans og Skatt (NS 4102)"
         assert map_to_ns4102('9999') == "Ukjent / Udefinert"
+
+    def test_reconciliation_account_only_in_hb_detected(self):
+        """Edge case: En konto finnes bare i Hovedboken (ikke oppført i Saldobalansen)."""
+        sb = pd.DataFrame({
+            'Konto': ['3000'],
+            'Kontonavn': ['Salgsinntekter'],
+            'IB': [0.0],
+            'UB': [100000.0]
+        })
+        hb = pd.DataFrame({
+            'Konto': ['3000', '9999'],
+            'Debet': [0.0, 5000.0],
+            'Kredit': [100000.0, 0.0]
+        })
+        result = reconcile_hb_with_sb(sb, hb)
+        assert result["is_reconciled"] is False
+        assert result["discrepancy_count"] >= 1
+        assert '9999' in result["discrepancies"]['Konto'].values
+
+    def test_reconciliation_account_only_in_sb_with_zero_movement(self):
+        """Edge case: En konto finnes i Saldobalansen med uendret saldo (IB == UB), ingen poster i HB."""
+        sb = pd.DataFrame({
+            'Konto': ['1000'],
+            'Kontonavn': ['Forskning og utvikling'],
+            'IB': [50000.0],
+            'UB': [50000.0]
+        })
+        hb = pd.DataFrame({
+            'Konto': ['3000'],
+            'Debet': [0.0],
+            'Kredit': [0.0]
+        })
+        result = reconcile_hb_with_sb(sb, hb)
+        # Konto 1000 skal stemme fordi IB(50000) + Netto(0) == UB(50000)
+        table = result["reconciliation_table"].set_index('Konto')
+        assert bool(table.loc['1000', 'Stemmer']) is True

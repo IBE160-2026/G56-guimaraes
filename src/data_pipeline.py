@@ -36,28 +36,31 @@ def detect_csv_delimiter_and_encoding(file_bytes: bytes) -> tuple[str, str]:
 
 def normalize_column_names(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Normaliserer typiske norske og engelske kolonnenavn til standard konvensjoner:
-    - 'Kontonr', 'Konto nr', 'Account', 'AccountID' -> 'Konto'
-    - 'Kontonavn', 'Beskrivelse', 'AccountName' -> 'Kontonavn'
-    - 'Debit' -> 'Debet'
-    - 'Credit' -> 'Kredit'
-    - 'Inngående balanse', 'Opening Balance' -> 'IB'
-    - 'Utgående balanse', 'Closing Balance' -> 'UB'
+    Normaliserer typiske norske og engelske kolonnenavn fra ERP-systemer:
+    - Fiken, Tripletex, PowerOffice Go, Visma eAccounting, Xero.
+    - 'Kontonr', 'Konto nr', 'Account', 'AccountID', 'KontoID' -> 'Konto'
+    - 'Kontonavn', 'Beskrivelse', 'AccountName', 'Kontotekst' -> 'Kontonavn'
+    - 'Debit', 'Inn' -> 'Debet'
+    - 'Credit', 'Ut' -> 'Kredit'
+    - 'Inngående balanse', 'Opening Balance', 'IB Beløp' -> 'IB'
+    - 'Utgående balanse', 'Closing Balance', 'UB Beløp' -> 'UB'
     """
     column_mapping = {}
     for col in df.columns:
-        clean_col = str(col).strip().lower()
-        if clean_col in ['kontonr', 'konto nr', 'kontonummer', 'account', 'accountid', 'account_id', 'konto_nr']:
+        clean_col = str(col).strip().lower().replace('_', ' ').replace('-', ' ')
+        # Fjern ekstra mellomrom
+        clean_col = " ".join(clean_col.split())
+        if clean_col in ['kontonr', 'konto nr', 'kontonummer', 'account', 'accountid', 'account id', 'konto nr.', 'konto id', 'kontoid', 'konto']:
             column_mapping[col] = 'Konto'
-        elif clean_col in ['kontonavn', 'konto navn', 'kontobeskrivelse', 'accountname', 'account_name', 'beskrivelse', 'tekst']:
+        elif clean_col in ['kontonavn', 'konto navn', 'kontobeskrivelse', 'accountname', 'account name', 'beskrivelse', 'tekst', 'kontotekst']:
             column_mapping[col] = 'Kontonavn'
-        elif clean_col in ['debit']:
+        elif clean_col in ['debit', 'debetbeløp', 'inn', 'debet (nok)', 'beløp debet']:
             column_mapping[col] = 'Debet'
-        elif clean_col in ['credit']:
+        elif clean_col in ['credit', 'kreditbeløp', 'ut', 'kredit (nok)', 'beløp kredit']:
             column_mapping[col] = 'Kredit'
-        elif clean_col in ['inngående balanse', 'inngående', 'opening balance', 'opening_balance', 'ib_beløp']:
+        elif clean_col in ['inngående balanse', 'inngående', 'opening balance', 'ib beløp', 'ib']:
             column_mapping[col] = 'IB'
-        elif clean_col in ['utgående balanse', 'utgående', 'closing balance', 'closing_balance', 'ub_beløp']:
+        elif clean_col in ['utgående balanse', 'utgående', 'closing balance', 'ub beløp', 'ub']:
             column_mapping[col] = 'UB'
             
     if column_mapping:

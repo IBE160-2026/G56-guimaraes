@@ -17,19 +17,34 @@ st.markdown(
 
 # Sidebar for innstillinger og hurtiglasting
 with st.sidebar:
-    st.header("⚙️ Konfigurasjon")
+    st.header("⚙️ Konfigurasjon & Sensormodus")
     demo_mode = st.radio(
         "Velg datakilde:",
-        ["Last opp egne filer", "Bruk eksempeldata (Balansert)", "Bruk eksempeldata (Med avvik)"],
-        index=1  # Standard: Balansert eksempeldata for umiddelbar sensor-visning
+        [
+            "Bruk eksempeldata (Balansert - Grønn sti)",
+            "Bruk eksempeldata (Med avvik - Rød sti)",
+            "Last opp egne filer (CSV / Excel)"
+        ],
+        index=0  # Standard: Balansert eksempeldata for umiddelbar sensor-visning
     )
     
     st.markdown("---")
     st.subheader("🤖 KI-innstillinger")
-    use_mock_ai = st.checkbox("Bruk testmodus (Mock KI)", value=True, help="Aktiver for å kjøre uten OpenAI API-nøkkel (Sensor-vennlig).")
+    use_mock_ai = st.checkbox(
+        "Bruk testmodus (Mock KI)", 
+        value=True, 
+        help="Aktiver for å kjøre 100 % lokalt og deterministisk uten OpenAI API-nøkkel (Sensor-vennlig)."
+    )
     openai_api_key = ""
     if not use_mock_ai:
         openai_api_key = st.text_input("OpenAI API-nøkkel:", type="password")
+
+    st.markdown("---")
+    st.markdown("### ℹ️ Om Løsningen")
+    st.caption(
+        "**Utviklings-KI:** Utviklet utelukkende med Google Gemini Antigravity (AiDD/BMAD).\n\n"
+        "**The AI Firewall:** Koden regner deterministisk i Pandas, KI forklarer via Pydantic Structured Outputs."
+    )
 
 sb_df = None
 hb_df = None
@@ -37,13 +52,13 @@ hb_df = None
 # Håndter datakilde
 sample_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../data/sample'))
 
-if demo_mode == "Bruk eksempeldata (Balansert)":
-    st.info("💡 Laster inn balanserte eksempeldata fra `data/sample/` (0 avvik).")
+if demo_mode == "Bruk eksempeldata (Balansert - Grønn sti)":
+    st.info("💡 **Sensormodus:** Laster inn balanserte eksempeldata fra `data/sample/` (0 avvik).")
     sb_df = pd.read_csv(os.path.join(sample_dir, 'saldobalanse_balansert.csv'))
     hb_df = pd.read_csv(os.path.join(sample_dir, 'hovedbok_balansert.csv'))
 
-elif demo_mode == "Bruk eksempeldata (Med avvik)":
-    st.warning("⚠️ Laster inn eksempeldata med konstruerte avvik på konto 1500 og 1920.")
+elif demo_mode == "Bruk eksempeldata (Med avvik - Rød sti)":
+    st.warning("⚠️ **Sensormodus:** Laster inn eksempeldata med konstruerte avvik på konto 1500 og 1920.")
     sb_df = pd.read_csv(os.path.join(sample_dir, 'saldobalanse_balansert.csv'))
     hb_df = pd.read_csv(os.path.join(sample_dir, 'hovedbok_med_avvik.csv'))
 
@@ -92,14 +107,19 @@ if sb_df is not None and hb_df is not None:
             st.error(f"❌ {e}")
             
     # 2. Kryssavstemming (IB + HB = UB)
-    st.subheader("Kryssavstemming: Hovedbok mot Saldobalanse ($IB + \\sum HB = UB$)")
+    st.markdown("### ⚖️ Kryssavstemming: Hovedbok mot Saldobalanse")
+    st.caption("Matematisk formel: $\\text{Inngående Balanse (IB)} + \\sum (\\text{Transaksjoner i HB}) = \\text{Utgående Balanse (UB i SB)}$ per konto.")
     try:
         recon_result = reconcile_hb_with_sb(sb_df, hb_df)
         if recon_result["is_reconciled"]:
-            st.success("✅ Full konsistens: Alle transaksjoner i hovedboken summerer seg nøyaktig til UB i saldobalansen (0 avvik).")
+            st.success("✅ **Full konsistens:** Alle transaksjoner i hovedboken summerer seg nøyaktig til UB i saldobalansen (0 avvik).")
         else:
-            st.error(f"❌ Avstemmingsavvik funnet på {recon_result['discrepancy_count']} konto(er):")
-            st.dataframe(recon_result["discrepancies"][['Konto', 'Kontonavn', 'IB', 'Netto_HB', 'Beregnet_UB', 'UB', 'Avvik']])
+            st.error(f"❌ **Avstemmingsavvik funnet:** Systemet har avdekket {recon_result['discrepancy_count']} uavstemt(e) konto(er)!")
+            st.dataframe(
+                recon_result["discrepancies"][['Konto', 'Kontonavn', 'IB', 'Netto_HB', 'Beregnet_UB', 'UB', 'Avvik']],
+                use_container_width=True
+            )
+            st.warning("⚠️ **Revisjonsadvarsel:** Avvik oppdaget. Ledelsesrapporten vil reflektere disse uoverensstemmelsene og varsle styret.")
     except Exception as e:
         st.error(f"Kunne ikke gjennomføre kryssavstemming: {e}")
         recon_result = None

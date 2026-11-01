@@ -48,6 +48,10 @@ flowchart TD
         L --> M
     end
 
+    subgraph BRANNMUR_ASSERTION ["The AI Firewall Assertion"]
+        H -.-> N["assert 'raw_transactions' not in payload<br/>assert isinstance(EBIT, (int, float))"]
+    end
+
     M --> N["PDF Engine (ReportLab)"]
     G --> N
     N --> O["Styrepakke.pdf<br/>(In-Memory Download)"]

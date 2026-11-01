@@ -78,3 +78,24 @@ class TestDataPipelineEdgeCases:
         assert cleaned.iloc[3] == -50.00
         assert cleaned.iloc[4] == 0.0
         assert cleaned.iloc[5] == 0.0
+
+    def test_norwegian_erp_column_variations(self):
+        """Tester at typiske kolonnenavn fra Tripletex/Visma (f.eks. 'Konto ID', 'Debetbeløp') normaliseres."""
+        from data_pipeline import normalize_column_names
+        raw_df = pd.DataFrame(columns=['Konto ID', 'Kontotekst', 'Debetbeløp', 'Kreditbeløp', 'IB Beløp', 'UB Beløp'])
+        normalized = normalize_column_names(raw_df)
+        assert 'Konto' in normalized.columns
+        assert 'Kontonavn' in normalized.columns
+        assert 'Debet' in normalized.columns
+        assert 'Kredit' in normalized.columns
+        assert 'IB' in normalized.columns
+        assert 'UB' in normalized.columns
+
+    def test_mixed_decimal_and_spaces_in_currency(self):
+        """Tester robusthet mot ekstreme norske tallformater som ' 1 250 450,75 '."""
+        s = pd.Series([" 1 250 450,75 ", "25 000.00", "0,50", " -150,00 "])
+        cleaned = clean_norwegian_numeric_series(s)
+        assert cleaned.iloc[0] == 1250450.75
+        assert cleaned.iloc[1] == 25000.00
+        assert cleaned.iloc[2] == 0.50
+        assert cleaned.iloc[3] == -150.00

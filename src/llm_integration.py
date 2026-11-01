@@ -21,8 +21,13 @@ class ManagementCommentary(BaseModel):
 
 def build_financial_context(sb_df: pd.DataFrame, recon_result: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """
-    Context Engineering: Konstruerer en rik og presis finansiell payload for KI-en.
+    THE AI FIREWALL - Context Engineering:
+    Konstruerer en strengt aggregert finansiell payload for KI-en.
     Inkluderer nøkkeltall, kontooppsummeringer og avstemmingsstatus fra Hovedboken.
+    
+    FIREWALL ASSERTION:
+    Payloaden inneholder ALDRI råbilag eller enkelttransaksjoner, kun ferdig beregnede
+    summer og verifiserte differanser fra Pandas.
     """
     sb = sb_df.copy()
     
@@ -67,7 +72,7 @@ def build_financial_context(sb_df: pd.DataFrame, recon_result: Optional[Dict[str
                 "advarsel": "Hovedboken og Saldobalansen har uavstemte poster. Tallene kan inneholde feilkonteringer."
             }
 
-    return {
+    payload = {
         "nokkeltall": {
             "Driftsinntekter_NOK": inntekter,
             "Varekostnad_NOK": varekostnad,
@@ -85,6 +90,12 @@ def build_financial_context(sb_df: pd.DataFrame, recon_result: Optional[Dict[str
         },
         "avstemming_hovedbok_mot_saldobalanse": recon_summary
     }
+
+    # Ufravikelig Brannmur-validering (AI Firewall assertion)
+    assert "raw_transactions" not in payload, "FIREWALL BRUDD: Råtransaksjoner lekker til KI-payload!"
+    assert isinstance(payload["nokkeltall"]["Driftsresultat_EBIT_NOK"], (int, float)), "FIREWALL BRUDD: EBIT må være deterministisk tall!"
+
+    return payload
 
 def generate_management_report(
     df: pd.DataFrame, 

@@ -7,6 +7,24 @@ Gruppeprosjekt i **IBE160 Programmering med KI** ved Høgskolen i Molde, høsten
 
 ---
 
+## 🎓 Hvordan prosjektet oppfyller IBE160-læringsmålene
+
+Dette prosjektet er utviklet for å demonstrere samtlige kjernekompetanser i **IBE160 Programmering med KI**:
+
+1. **Aktiv styring av KI (Ikke passiv bruk):**
+   * Utviklingen er utført utelukkende med **Google Gemini Antigravity** som agentisk parprogrammerer.
+   * Studenten har definert arkitektoniske rekkverk (*The AI Firewall*), avvist overoptimistiske forslag (f.eks. OCR-tolkning og Altinn-scraping) og styrt utviklingen gjennom fire dokumenterte iterasjoner.
+2. **Klar arbeidsdeling: "Koden regner, KI forklarer":**
+   * Ingen språkmodell utfører summeringer eller regnskapskontroll.
+   * Dobbelt bokføring ($\sum D = \sum K$) og kryssavstemming ($IB + \Delta HB = UB$) skjer 100 % deterministisk i Python/Pandas. Runtime-LLM (`gpt-4o-mini`) mottar utelukkende ferdig aggregerte nøkkeltall og valideres via Pydantic.
+3. **Kvalitetssikring og feilretting av KI-generert kode:**
+   * 20 automatiserte enhetstester (`pytest`) dekker balansekontroll, kryssavstemming, edge cases, filformater og PDF-generering.
+   * Konkrete bugs i KI-kode (flyttallsunøyaktighet, tegnsett, uoppdagede avvik) ble identifisert og rettet manuelt (dokumentert i `docs/KVALITETSSIKRING_OG_TESTING.md`).
+4. **Frakoblet sensormodus:**
+   * Applikasjonen kjører 100 % lokalt og offline via syntetiske eksempeldatasett med fasit, uten behov for eksterne API-nøkler.
+
+---
+
 ## 📌 Om Prosjektet
 
 Dette prosjektet leverer en automatisert webapplikasjon bygget i **Python** og **Streamlit** som løser to sentrale problemer for små og mellomstore bedrifter (SMB) uten egen økonomisjef:
@@ -89,10 +107,11 @@ I sidepanelet til venstre i applikasjonen kan du teste hele systemet uten å las
    * Dersom du ønsker å teste med en ekte OpenAI-nøkkel, fjerner du bare avkrysningen og limer inn nøkkelen din i feltet (eller oppretter `.env` basert på `.env.example`).
 
 ### Kjøre automatiserte tester (`pytest`)
-For å kjøre samtlige **13 automatiserte enhetstester** som verifiserer regnskapslogikken, feilhåndtering og PDF-generering:
+For å kjøre samtlige **20 automatiserte enhetstester** som verifiserer regnskapslogikken, feilhåndtering og PDF-generering:
 ```bash
 pytest -v tests/
 ```
+*(Alternativt i Windows: Dobbeltklikk på `scripts/run_tests.bat`)*
 
 ---
 

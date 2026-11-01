@@ -42,7 +42,12 @@ Sensorveiledningen legger avgjørende vekt på at gruppen ikke bare aksepterer K
 ### Iterasjon 4: Robusthet mot særnorske CSV-formater (Semikolon og komma)
 * **KI-ens opprinnelige kode:** Benyttet enkel `pd.read_csv(file_buffer)`.
 * **Problem avdekket:** Fiken og Tripletex eksporterer ofte med semikolon (`;`) og desimalkomma (`100 000,00`). Standardkoden krasjet med `ParserError`.
-* **Beslutning og styring:** Vi instruerte KI-en til å bygge en robust forhåndsskanner (`detect_csv_delimiter_and_encoding`) som sniffer de første 8 KB for `;` vs `,`, støtter `utf-8-sig` (BOM) og `latin1`, samt normaliserer norske kolonnenavn (`Kontonr` $\rightarrow$ `Konto`).
+* **Beslutning og styring:** Vi instruerte Gemini Antigravity til å bygge en robust forhåndsskanner (`detect_csv_delimiter_and_encoding`) som sniffer de første 8 KB for `;` vs `,`, støtter `utf-8-sig` (BOM) og `latin1`, samt normaliserer norske kolonnenavn (`Kontonr` $\rightarrow$ `Konto`).
+
+### Iterasjon 5: Formalisering av "The AI Firewall" med Assertions
+* **KI-ens opprinnelige kode:** Sendte en stor dictionary med regnskapstall til LLM uten verifikasjon av innholdet.
+* **Problem avdekket:** Risiko for at ufiltrerte transaksjonsdetaljer eller delvise regnestykker ble lekket inn i prompten, noe som kunne føre til at LLM forsøkte å regne på tallene selv.
+* **Beslutning og styring:** Vi tvang inn en formell runtime-assertion i `build_financial_context()`: `assert 'raw_transactions' not in payload` og `assert isinstance(EBIT, (int, float))`. Samtidig ble det skrevet en dedikert enhetstest (`test_ai_firewall_context_never_contains_raw_transactions`) som garanterer at koden regner og KI-en kun forklarer.
 
 ---
 

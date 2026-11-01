@@ -1,7 +1,7 @@
 import io
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
 def generate_management_pdf(company_name: str, ai_report, ns4102_summary: dict = None) -> io.BytesIO:
@@ -70,17 +70,22 @@ def generate_management_pdf(company_name: str, ai_report, ns4102_summary: dict =
     
     elements = []
     
-    # 1. Header
+    # 1. Header med profesjonell selskaps- og revisjonsinformasjon
     elements.append(Paragraph(f"Styrepakke & Ledelsesrapport: {company_name}", title_style))
     elements.append(Paragraph("Utarbeidet med KI-Revisor • Basert på NS 4102 Kontoplan og Kryssavstemt Hovedbok", subtitle_style))
-    elements.append(Spacer(1, 5))
+    elements.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#cbd5e1"), spaceBefore=2, spaceAfter=8))
     
-    # 2. Hovedkonklusjon (Callout box)
-    callout_data = [[Paragraph(f"<b>Hovedkonklusjon til Styret:</b><br/>{ai_report.hovedkonklusjon}", callout_style)]]
+    # 2. Hovedkonklusjon (Callout box med fargeindikator)
+    has_warning = "ADVARSEL" in ai_report.hovedkonklusjon.upper() or "feil" in ai_report.revisors_avstemmingsnotat.lower()
+    box_bg = colors.HexColor("#fef2f2") if has_warning else colors.HexColor("#eff6ff")
+    box_border = colors.HexColor("#ef4444") if has_warning else colors.HexColor("#3b82f6")
+    stamp_text = "<b>[REVISJONSSTATUS: AVVIK OPPDAGET I HOVEDBOK]</b><br/>" if has_warning else "<b>[REVISJONSSTATUS: 100% GODKJENT OG AVSTEMT]</b><br/>"
+    
+    callout_data = [[Paragraph(f"{stamp_text}<b>Hovedkonklusjon til Styret:</b><br/>{ai_report.hovedkonklusjon}", callout_style)]]
     callout_table = Table(callout_data, colWidths=[515])
     callout_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#eff6ff")),
-        ('BOX', (0, 0), (-1, -1), 1, colors.HexColor("#3b82f6")),
+        ('BACKGROUND', (0, 0), (-1, -1), box_bg),
+        ('BOX', (0, 0), (-1, -1), 1.5, box_border),
         ('TOPPADDING', (0, 0), (-1, -1), 8),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
         ('LEFTPADDING', (0, 0), (-1, -1), 10),

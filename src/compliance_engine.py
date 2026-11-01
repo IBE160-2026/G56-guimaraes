@@ -46,9 +46,13 @@ def reconcile_hb_with_sb(sb_df: pd.DataFrame, hb_df: pd.DataFrame) -> dict:
     hb['Netto_HB'] = hb['Debet'] - hb['Kredit']
     hb_grouped = hb.groupby('Konto')['Netto_HB'].sum().reset_index()
     
-    # Slå sammen med Saldobalansen
-    merged = pd.merge(sb, hb_grouped, on='Konto', how='left')
+    # Slå sammen med Saldobalansen (outer join for å fange kontoer som kun finnes i HB eller SB)
+    merged = pd.merge(sb, hb_grouped, on='Konto', how='outer')
+    merged['IB'] = merged['IB'].fillna(0.0)
+    merged['UB'] = merged['UB'].fillna(0.0)
     merged['Netto_HB'] = merged['Netto_HB'].fillna(0.0)
+    if 'Kontonavn' in merged.columns:
+        merged['Kontonavn'] = merged['Kontonavn'].fillna('Ukjent konto (Kun i Hovedbok)')
     
     # Beregnet UB basert på HB
     merged['Beregnet_UB'] = merged['IB'] + merged['Netto_HB']
