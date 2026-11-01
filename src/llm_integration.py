@@ -33,24 +33,8 @@ def build_financial_context(sb_df: pd.DataFrame, recon_result: Optional[Dict[str
     Payloaden inneholder ALDRI råbilag eller enkelttransaksjoner, kun ferdig beregnede
     summer og verifiserte differanser fra Pandas.
     """
-    sb = sb_df.copy()
-    
-    # Summer per kategori
-    inntekter = float(sb[sb['NS4102_Kategori'] == "Salgs- og Driftsinntekt (NS 4102)"]['Kredit'].sum()) if 'Kredit' in sb.columns else 0.0
-    driftskostnader = float(sb[sb['NS4102_Kategori'] == "Driftskostnader (NS 4102)"]['Debet'].sum()) if 'Debet' in sb.columns else 0.0
-    ebit = inntekter - driftskostnader
-    margin = round((ebit / inntekter * 100), 1) if inntekter > 0 else 0.0
-    
-    # Detaljerte balanseposter
-    bank_ub = float(sb[sb['Konto'].astype(str).str.startswith('19')]['UB'].sum()) if 'UB' in sb.columns else 0.0
-    kundefordringer_ub = float(sb[sb['Konto'].astype(str).str.startswith('15')]['UB'].sum()) if 'UB' in sb.columns else 0.0
-    leverandorgjeld_ub = float(sb[sb['Konto'].astype(str).str.startswith('24')]['UB'].sum()) if 'UB' in sb.columns else 0.0
-    
-    # Kostnadsfordeling
-    varekostnad = float(sb[sb['Konto'].astype(str).str.startswith('4')]['Debet'].sum()) if 'Debet' in sb.columns else 0.0
-    lonnskostnad = float(sb[sb['Konto'].astype(str).str.startswith('5')]['Debet'].sum()) if 'Debet' in sb.columns else 0.0
-    bruttofortjeneste = inntekter - varekostnad
-    bruttomargin = round((bruttofortjeneste / inntekter * 100), 1) if inntekter > 0 else 0.0
+    from compliance_engine import calculate_detailed_financial_metrics
+    metrics = calculate_detailed_financial_metrics(sb_df)
     
     # Avstemmingsstatus fra Hovedboken
     recon_summary = {"status": "Ikke gjennomført"}
@@ -78,22 +62,32 @@ def build_financial_context(sb_df: pd.DataFrame, recon_result: Optional[Dict[str
 
     payload = {
         "nokkeltall": {
-            "Driftsinntekter_NOK": inntekter,
-            "Varekostnad_NOK": varekostnad,
-            "Bruttofortjeneste_NOK": bruttofortjeneste,
-            "Bruttomargin_prosent": bruttomargin,
-            "Lonnskostnad_NOK": lonnskostnad,
-            "Samlede_Driftskostnader_NOK": driftskostnader,
-            "Driftsresultat_EBIT_NOK": ebit,
-            "Driftsmargin_prosent": margin
+            "Driftsinntekter_NOK": metrics["driftsinntekter"],
+            "Varekostnad_NOK": metrics["varekostnad"],
+            "Bruttofortjeneste_NOK": metrics["bruttofortjeneste"],
+            "Bruttomargin_prosent": metrics["bruttomargin"],
+            "Lonnskostnad_NOK": metrics["lonnskostnad"],
+            "Andre_Driftskostnader_NOK": metrics["andre_driftskostnader"],
+            "Samlede_Driftskostnader_NOK": metrics["samlede_driftskostnader"],
+            "Driftsresultat_EBIT_NOK": metrics["ebit"],
+            "Driftsmargin_prosent": metrics["driftsmargin"],
+            "Ordinart_Resultat_NOK": metrics["ordinart_resultat"]
         },
         "arbeidskapital_og_likviditet": {
-            "Bankinnskudd_UB_NOK": bank_ub,
-            "Kundefordringer_UB_NOK": kundefordringer_ub,
-            "Leverandorgjeld_UB_NOK": leverandorgjeld_ub
+            "Bankinnskudd_UB_NOK": metrics["bankinnskudd"],
+            "Kundefordringer_UB_NOK": metrics["kundefordringer"],
+            "Leverandorgjeld_UB_NOK": metrics["leverandorgjeld"],
+            "Arbeidskapital_NOK": metrics["arbeidskapital"],
+            "Likviditetsgrad_1": metrics["likviditetsgrad_1"]
         },
         "avstemming_hovedbok_mot_saldobalanse": recon_summary
     }
+
+    # Ufravikelig Brannmur-validering (AI Firewall assertion)
+    assert "raw_transactions" not in payload, "FIREWALL BRUDD: Råtransaksjoner lekker til KI-payload!"
+    assert isinstance(payload["nokkeltall"]["Driftsresultat_EBIT_NOK"], (int, float)), "FIREWALL BRUDD: EBIT må være deterministisk tall!"
+
+    return payload
 
     # Ufravikelig Brannmur-validering (AI Firewall assertion)
     assert "raw_transactions" not in payload, "FIREWALL BRUDD: Råtransaksjoner lekker til KI-payload!"

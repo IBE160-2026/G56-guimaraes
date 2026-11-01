@@ -120,3 +120,22 @@ class TestComplianceEngine:
         # Konto 1000 skal stemme fordi IB(50000) + Netto(0) == UB(50000)
         table = result["reconciliation_table"].set_index('Konto')
         assert bool(table.loc['1000', 'Stemmer']) is True
+
+    def test_calculate_detailed_financial_metrics(self):
+        """Tester at den deterministiske nøkkeltallsmotoren regner ut bruttofortjeneste, EBIT og arbeidskapital nøyaktig."""
+        from compliance_engine import calculate_detailed_financial_metrics
+        sb_df = pd.DataFrame({
+            'Konto': ['3000', '4000', '5000', '6000', '1920', '1500', '2400'],
+            'Debet': [0.0, 50000.0, 30000.0, 10000.0, 0.0, 0.0, 0.0],
+            'Kredit': [200000.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            'UB': [0.0, 0.0, 0.0, 0.0, 100000.0, 40000.0, 30000.0]
+        })
+        m = calculate_detailed_financial_metrics(sb_df)
+        assert m["driftsinntekter"] == 200000.0
+        assert m["varekostnad"] == 50000.0
+        assert m["bruttofortjeneste"] == 150000.0
+        assert m["bruttomargin"] == 75.0
+        assert m["samlede_driftskostnader"] == 90000.0
+        assert m["ebit"] == 110000.0
+        assert m["driftsmargin"] == 55.0
+        assert m["arbeidskapital"] == 110000.0  # (100k bank + 40k fordring) - 30k gjeld = 110k

@@ -163,23 +163,27 @@ if sb_df is not None and hb_df is not None:
         if 'Konto' in sb_mapped.columns:
             sb_mapped['NS4102_Kategori'] = sb_mapped['Konto'].apply(map_to_ns4102)
             
-        # Deterministisk nøkkeltallsberegning
-        driftsinntekter = sb_mapped[sb_mapped['NS4102_Kategori'] == "Salgs- og Driftsinntekt (NS 4102)"]['Kredit'].sum()
-        driftskostnader = sb_mapped[sb_mapped['NS4102_Kategori'] == "Driftskostnader (NS 4102)"]['Debet'].sum()
-        ebit = driftsinntekter - driftskostnader
-        margin = (ebit / driftsinntekter * 100) if driftsinntekter > 0 else 0
+        # Deterministisk nøkkeltallsberegning via felles motor
+        from compliance_engine import calculate_detailed_financial_metrics
+        metrics = calculate_detailed_financial_metrics(sb_mapped)
         
         col_m1, col_m2, col_m3, col_m4 = st.columns(4)
-        col_m1.metric("Driftsinntekter", f"{driftsinntekter:,.0f} NOK")
-        col_m2.metric("Driftskostnader", f"{driftskostnader:,.0f} NOK")
-        col_m3.metric("Driftsresultat (EBIT)", f"{ebit:,.0f} NOK")
-        col_m4.metric("Driftsmargin", f"{margin:.1f} %")
+        col_m1.metric("Driftsinntekter", f"{metrics['driftsinntekter']:,.0f} NOK")
+        col_m2.metric("Driftskostnader", f"{metrics['samlede_driftskostnader']:,.0f} NOK")
+        col_m3.metric("Driftsresultat (EBIT)", f"{metrics['ebit']:,.0f} NOK")
+        col_m4.metric("Driftsmargin", f"{metrics['driftsmargin']:.1f} %")
+
+        col_m5, col_m6, col_m7, col_m8 = st.columns(4)
+        col_m5.metric("Bruttofortjeneste", f"{metrics['bruttofortjeneste']:,.0f} NOK")
+        col_m6.metric("Bruttomargin", f"{metrics['bruttomargin']:.1f} %")
+        col_m7.metric("Arbeidskapital", f"{metrics['arbeidskapital']:,.0f} NOK")
+        col_m8.metric("Likviditetsgrad 1", f"{metrics['likviditetsgrad_1']:.2f}")
         
         # Visuell graf: Hovedstørrelser i resultatet
         with st.expander("📊 Vis grafisk resultatfordeling", expanded=False):
             chart_df = pd.DataFrame({
                 "Finansiell Post": ["Driftsinntekter", "Driftskostnader", "Driftsresultat (EBIT)"],
-                "Beløp (NOK)": [float(driftsinntekter), float(driftskostnader), float(ebit)]
+                "Beløp (NOK)": [float(metrics['driftsinntekter']), float(metrics['samlede_driftskostnader']), float(metrics['ebit'])]
             }).set_index("Finansiell Post")
             st.bar_chart(chart_df)
         
