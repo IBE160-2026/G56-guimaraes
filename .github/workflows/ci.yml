@@ -24,7 +24,12 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+        pip install ruff pytest-cov
 
-    - name: Kjør enhetstester (pytest)
+    - name: Kjør statisk kodeanalyse (Ruff linter)
       run: |
-        pytest -v tests/
+        ruff check src/ tests/ --select E,F,W --ignore E501
+
+    - name: Kjør enhetstester med kodedekning (pytest-cov)
+      run: |
+        pytest -v tests/ --cov=src --cov-report=term-missing --cov-fail-under=80

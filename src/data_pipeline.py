@@ -1,6 +1,38 @@
 import pandas as pd
 import io
 import re
+import logging
+import json
+from datetime import datetime
+
+logger = logging.getLogger("g56_accounting")
+
+def validate_input(df: pd.DataFrame, expected_type: str = "SB") -> None:
+    """
+    Validerer at påkrevde kolonner og datatyper er på plass i henhold til forventet rapporttype.
+    expected_type kan være 'SB' (Saldobalanse) eller 'HB' (Hovedbok).
+    Kaster ValueError med pedagogisk norsk melding hvis valideringen feiler.
+    """
+    if df is None or df.empty:
+        raise ValueError("Datagrunnlaget er tomt. Vennligst kontroller filen.")
+
+    if 'Konto' not in df.columns:
+        cols = ", ".join([f"'{c}'" for c in df.columns])
+        raise ValueError(
+            f"Påkrevd kolonne 'Konto' (eller 'Kontonr') mangler. "
+            f"Funnede kolonner: [{cols}]. Vennligst kontroller filens overskriftsrad."
+        )
+
+    if expected_type == "SB":
+        # Saldobalanse forventer Debet og Kredit, og ideelt IB og UB
+        missing = [col for col in ['Debet', 'Kredit'] if col not in df.columns]
+        if missing:
+            raise ValueError(f"Saldobalansen mangler påkrevde beløpskolonner: {', '.join(missing)}.")
+    elif expected_type == "HB":
+        # Hovedbok forventer Debet og Kredit
+        missing = [col for col in ['Debet', 'Kredit'] if col not in df.columns]
+        if missing:
+            raise ValueError(f"Hovedboken mangler påkrevde beløpskolonner: {', '.join(missing)}.")
 
 def detect_csv_delimiter_and_encoding(file_bytes: bytes) -> tuple[str, str]:
     """

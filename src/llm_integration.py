@@ -1,8 +1,12 @@
 import json
+import time
+import logging
 import pandas as pd
 from openai import OpenAI
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
+
+logger = logging.getLogger("g56_accounting")
 
 # TOP 10% LLM PATTERN: Dyp, strukturert finansiell rapportering (CFO & Revisor)
 class ActionItem(BaseModel):
@@ -205,7 +209,50 @@ def generate_management_report(
                 ]
             )
 
-    # 2. LIVE OPENAI API MED RIGID SYSTEM PROMPT
+def post_validate_ai_response(report: ManagementCommentary, expected_context: Dict[str, Any]) -> None:
+    """
+    POST-VALIDATION GUARD (The AI Firewall - Trinn 2):
+    Kryss-sjekker at KI-rapporten ikke motsier de deterministiske tallene.
+    Dersom kryssavstemmingen var godkjent, skal rapporten ikke påstå at det er ubalanse,
+    og dersom det var avvik, SKAL revisorsnotatet omtale dette.
+    """
+    recon_status = expected_context.get("avstemming_hovedbok_mot_saldobalanse", {}).get("status", "")
+    
+    if "GODKJENT" in recon_status:
+        # Hvis avstemming var godkjent, skal det ikke stå "ALVORLIGE AVVIK" i konklusjonen
+        if "alvorlige avvik" in report.hovedkonklusjon.lower():
+            raise ValueError("Kvalitetssikringsfeil: KI påstår regnskapsfeil til tross for godkjent avstemming.")
+    elif "AVVIK OPPDAGET" in recon_status:
+        # Hvis avvik ble oppdaget, SKAL revisorsnotat inneholde advarsel
+        notat = report.revisors_avstemmingsnotat.lower() + " " + report.hovedkonklusjon.lower()
+        if not any(w in notat for w in ["avvik", "feil", "advarsel", "uavstemt", "differanse"]):
+            raise ValueError("Kvalitetssikringsfeil: KI unnlot å varsle styret om observerte avvik i Hovedboken.")
+
+def execute_openai_with_retry(client: OpenAI, messages: list, max_retries: int = 3, timeout_sec: float = 20.0) -> ManagementCommentary:
+    """
+    Kjører OpenAI API-kall med eksponentiell backoff og feilhåndtering for nettverks- og API-tidsavbrudd.
+    """
+    last_err = None
+    for attempt in range(1, max_retries + 1):
+        try:
+            completion = client.beta.chat.completions.parse(
+                model="gpt-4o-mini",
+                messages=messages,
+                response_format=ManagementCommentary,
+                temperature=0.2,
+                timeout=timeout_sec
+            )
+            return completion.choices[0].message.parsed
+        except Exception as e:
+            last_err = e
+            logger.warning(f"OpenAI API forsøk {attempt}/{max_retries} feilet: {e}")
+            if attempt < max_retries:
+                time.sleep(2 ** (attempt - 1))  # 1s, 2s, 4s
+            else:
+                raise RuntimeError(
+                    f"Midlertidig API-feil ved kommunikasjon med OpenAI etter {max_retries} forsøk: {last_err}. "
+                    f"Vennligst sjekk internettforbindelsen eller prøv igjen om et øyeblikk."
+                )
     context_json = json.dumps(financial_context, indent=2, ensure_ascii=False)
     
     system_prompt = (
@@ -222,16 +269,17 @@ def generate_management_report(
 
     try:
         client = OpenAI(api_key=api_key)
-        completion = client.beta.chat.completions.parse(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-            response_format=ManagementCommentary,
-            temperature=0.2
-        )
-        return completion.choices[0].message.parsed
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ]
+        parsed_report = execute_openai_with_retry(client, messages)
+        # Kjør post-validering
+        post_validate_ai_response(parsed_report, financial_context)
+        return parsed_report
 
     except Exception as e:
+        if isinstance(e, (RuntimeError, ValueError)):
+            raise e
+        raise ValueError(f"Uventet feil ved generering av rapport: {e}")
         raise RuntimeError(f"Feil under kommunikasjon med OpenAI: {e}")

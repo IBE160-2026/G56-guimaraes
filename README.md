@@ -107,7 +107,7 @@ I sidepanelet til venstre i applikasjonen kan du teste hele systemet uten å las
    * Dersom du ønsker å teste med en ekte OpenAI-nøkkel, fjerner du bare avkrysningen og limer inn nøkkelen din i feltet (eller oppretter `.env` basert på `.env.example`).
 
 ### Kjøre automatiserte tester (`pytest`)
-For å kjøre samtlige **20 automatiserte enhetstester** som verifiserer regnskapslogikken, feilhåndtering og PDF-generering:
+For å kjøre samtlige **25 automatiserte enhetstester** som verifiserer regnskapslogikken, feilhåndtering, parametriserte edge cases og PDF-generering:
 ```bash
 pytest -v tests/
 ```

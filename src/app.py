@@ -2,10 +2,21 @@ import streamlit as st
 import pandas as pd
 import io
 import os
-from data_pipeline import process_csv_in_memory, process_excel_in_memory
+import logging
+from app_logging import setup_app_logging
+from data_pipeline import process_csv_in_memory, process_excel_in_memory, validate_input
 from compliance_engine import validate_balance, map_to_ns4102, reconcile_hb_with_sb
 from llm_integration import generate_management_report
 from pdf_generator import generate_management_pdf
+
+logger = setup_app_logging()
+
+def check_env_security():
+    """Varsler hvis sensitiv .env-fil utilsiktet er opprettet uten .gitignore-beskyttelse."""
+    if os.path.exists(".env"):
+        logger.warning(".env fil detektert. Verifiserer at den er ignorert av Git.")
+
+check_env_security()
 
 st.set_page_config(page_title="Ledelsesrapport & Regnskapskontroll (KI)", layout="wide", page_icon="📊")
 
@@ -68,15 +79,27 @@ else:
         st.subheader("1. Saldobalanse (SB)")
         uploaded_sb = st.file_uploader("Last opp Saldobalanse (CSV / Excel)", type=["csv", "xlsx"], key="sb_upload")
         if uploaded_sb:
-            file_bytes = io.BytesIO(uploaded_sb.getvalue())
-            sb_df = process_csv_in_memory(file_bytes, uploaded_sb.name) if uploaded_sb.name.endswith('.csv') else list(process_excel_in_memory(file_bytes, uploaded_sb.name).values())[0]
+            try:
+                file_bytes = io.BytesIO(uploaded_sb.getvalue())
+                sb_df = process_csv_in_memory(file_bytes, uploaded_sb.name) if uploaded_sb.name.endswith('.csv') else list(process_excel_in_memory(file_bytes, uploaded_sb.name).values())[0]
+                validate_input(sb_df, expected_type="SB")
+                st.success(f"✅ Lastet inn '{uploaded_sb.name}' ({len(sb_df)} rader)")
+            except Exception as e:
+                st.error(f"❌ Feil ved lasting av Saldobalanse: {e}")
+                sb_df = None
             
     with col_up2:
         st.subheader("2. Hovedbok (HB)")
         uploaded_hb = st.file_uploader("Last opp Hovedbok (CSV / Excel)", type=["csv", "xlsx"], key="hb_upload")
         if uploaded_hb:
-            file_bytes = io.BytesIO(uploaded_hb.getvalue())
-            hb_df = process_csv_in_memory(file_bytes, uploaded_hb.name) if uploaded_hb.name.endswith('.csv') else list(process_excel_in_memory(file_bytes, uploaded_hb.name).values())[0]
+            try:
+                file_bytes = io.BytesIO(uploaded_hb.getvalue())
+                hb_df = process_csv_in_memory(file_bytes, uploaded_hb.name) if uploaded_hb.name.endswith('.csv') else list(process_excel_in_memory(file_bytes, uploaded_hb.name).values())[0]
+                validate_input(hb_df, expected_type="HB")
+                st.success(f"✅ Lastet inn '{uploaded_hb.name}' ({len(hb_df)} transaksjoner)")
+            except Exception as e:
+                st.error(f"❌ Feil ved lasting av Hovedbok: {e}")
+                hb_df = None
 
 # Behandling når begge filer er tilgjengelige
 if sb_df is not None and hb_df is not None:

@@ -2,7 +2,7 @@
 
 **Prosjekt:** G56 — Ledelsesrapport og regnskapskontroll med KI  
 **Framework:** BMAD v6.0 (Gemini Antigravity)  
-**Status:** All Stories Verified ✅ (20/20 enhetstester bestått)
+**Status:** All Stories Verified ✅ (25/25 enhetstester bestått)
 
 ---
 
@@ -10,13 +10,13 @@
 
 | Story | Tittel | Status | Verifikasjonsmetode |
 | :--- | :--- | :--- | :--- |
-| **Story 1.1** | Filopplasting & Deteksjon av Norsk CSV & Excel | ✅ Fullført | `tests/test_data_pipeline.py` (Semikolon, desimalkomma, koding, .xlsx, ERP-kolonnenavn) |
+| **Story 1.1** | Filopplasting & Deteksjon av Norsk CSV & Excel | ✅ Fullført | `tests/test_data_pipeline.py` (Parametriserte feil, semikolon, koding, .xlsx, ERP-navn) |
 | **Story 2.1** | Dobbelt Bokføringskontroll ($\sum D = \sum K$) | ✅ Fullført | `tests/test_compliance.py::test_validate_balance_failure` |
-| **Story 2.2** | Kryssavstemming HB mot SB ($IB + \Delta HB = UB$) | ✅ Fullført | `tests/test_compliance.py` (inkl. outer join edge cases) |
+| **Story 2.2** | Kryssavstemming HB mot SB ($IB + \Delta HB = UB$) | ✅ Fullført | `tests/test_compliance.py` (inkl. outer join edge cases for manglende kontoer) |
 | **Story 2.3** | Mapping mot Norsk Standard Kontoplan (NS 4102) | ✅ Fullført | `tests/test_compliance.py::test_ns4102_mapping` |
 | **Story 3.1** | Deterministisk Nøkkeltallsberegning | ✅ Fullført | `tests/test_reporting.py` (EBIT, margin, driftsinntekter) |
-| **Story 3.2** | Pydantic-strukturert CFO-rapport | ✅ Fullført | `tests/test_reporting.py` (The AI Firewall runtime assertions) |
-| **Story 4.1** | In-memory PDF-eksport via ReportLab | ✅ Fullført | `tests/test_reporting.py::test_pdf_generation_produces_valid_pdf_buffer` |
+| **Story 3.2** | Pydantic-strukturert CFO-rapport & Retry | ✅ Fullført | `tests/test_reporting.py` (The AI Firewall runtime assertions & post-validering) |
+| **Story 4.1** | In-memory PDF-eksport via ReportLab | ✅ Fullført | `tests/test_data_pipeline.py` (Store tall og æ, ø, å støtte) |
 
 ---
 

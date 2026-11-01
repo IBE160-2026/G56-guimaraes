@@ -7,9 +7,56 @@ import pandas as pd
 # Legger src-mappen til i system path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 
-from data_pipeline import process_csv_in_memory, process_excel_in_memory, detect_csv_delimiter_and_encoding, clean_norwegian_numeric_series
+from data_pipeline import (
+    process_csv_in_memory, 
+    process_excel_in_memory, 
+    detect_csv_delimiter_and_encoding, 
+    clean_norwegian_numeric_series,
+    validate_input
+)
 
 class TestDataPipelineEdgeCases:
+
+    @pytest.mark.parametrize("invalid_csv,expected_err", [
+        (b"", "er tom"),
+        (b"Header1,Header2\nVal1,Val2", "mangler den p.*krevde kolonnen 'Konto'"),
+        (b"Konto;Kontonavn\n1000;Kasse", "mangler p.*krevde bel.*pskolonner"),
+    ])
+    def test_parametrized_invalid_csv_inputs(self, invalid_csv, expected_err):
+        """Tester flere typer ugyldige CSV-inndata via pytest-parametrisering."""
+        buf = io.BytesIO(invalid_csv)
+        with pytest.raises(ValueError, match=expected_err):
+            df = process_csv_in_memory(buf, "ugyldig.csv")
+            validate_input(df, expected_type="SB")
+
+    def test_validate_input_detects_empty_dataframe(self):
+        """Tester at validate_input avviser tomme DataFrames."""
+        with pytest.raises(ValueError, match="Datagrunnlaget er tomt"):
+            validate_input(pd.DataFrame(), expected_type="SB")
+
+    def test_large_numbers_and_norwegian_special_characters_pdf(self):
+        """Tester at store tall (milliarder) og æ, ø, å håndteres uten overflyt eller tegnsettfeil."""
+        from pdf_generator import generate_management_pdf
+        from llm_integration import ManagementCommentary, ActionItem
+        
+        rep = ManagementCommentary(
+            hovedkonklusjon="Selskapet har omsatt for 1 250 000 000,50 NOK med sunn vekst i Ålesund og Tromsø.",
+            lonnsomhet_og_marginer="Lønnskostnadene i perioden utgjør 450 000 000 NOK. Driftsmarginen er 18,5 %.",
+            likviditet_og_arbeidskapital="Bankinnskudd utgjør 320 000 000 NOK hos DNB og SpareBank 1.",
+            revisors_avstemmingsnotat="Ingen feil i avstemmingen. Debet = Kredit på tvers av samtlige poster.",
+            potensielle_avvik=["Råvareprisene øker, valutapåvirkning bør overvåkes."],
+            tiltaksliste=[
+                ActionItem(
+                    tiltak="Iverksett sikringsavtaler for råvarekjøp i euro.",
+                    begrunnelse="Valutasvingninger truer driftsmarginen.",
+                    prioritet="Høy",
+                    forventet_effekt="Reduserer finansiell risiko med 25 %."
+                )
+            ]
+        )
+        pdf_buf = generate_management_pdf("Norsk Storkonsern AS (ÆØÅ)", rep)
+        assert len(pdf_buf.getvalue()) > 1000
+        assert pdf_buf.getvalue().startswith(b"%PDF-")
 
     def test_excel_file_processing(self):
         """Tester at in-memory Excel-filer (.xlsx) leses og normaliseres korrekt."""
