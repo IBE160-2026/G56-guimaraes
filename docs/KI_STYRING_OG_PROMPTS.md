@@ -116,7 +116,7 @@ flowchart LR
 ```
 
 1. **`01_analysis/`:** Analyse av forretningsdomenet, GRS/IFRS og begrunnelse for avvik fra proposal.
-2. **`02_product/PRD.md`:** 4 Epics, 7 User Stories, funksjonelle formelkrav ($IB + HB = UB$) og testmatrise (Definition of Done).
+2. **`02_product/PRD.md`:** 5 Epics, 8 User Stories, funksjonelle formelkrav ($IB + HB = UB$), HTML- og PDF-eksport og sporbarhetsmatrise.
 3. **`03_ux/`:** Wireframes, informasjonsarkitektur og universell utforming for Streamlit-dashbordet.
 4. **`04_architecture/ARCHITECTURE.md`:** Dataflyt, AI Firewall, systemgrenser og mock-arkitektur.
-5. **`tests/`:** 26 automatiserte tester som verifiserer koden mot PRD-kravene.
+5. **`tests/`:** 28 automatiserte tester som verifiserer koden mot PRD-kravene.

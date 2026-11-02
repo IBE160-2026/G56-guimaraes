@@ -18,7 +18,7 @@ Dette prosjektet er utviklet for å demonstrere samtlige kjernekompetanser i **I
    * Ingen språkmodell utfører summeringer eller regnskapskontroll.
    * Dobbelt bokføring ($\sum D = \sum K$) og kryssavstemming ($IB + \Delta HB = UB$) skjer 100 % deterministisk i Python/Pandas. Runtime-LLM (`gpt-4o-mini`) mottar utelukkende ferdig aggregerte nøkkeltall og valideres via Pydantic.
 3. **Kvalitetssikring og feilretting av KI-generert kode:**
-   * 20 automatiserte enhetstester (`pytest`) dekker balansekontroll, kryssavstemming, edge cases, filformater og PDF-generering.
+   * 28 automatiserte enhetstester (`pytest`) dekker balansekontroll, kryssavstemming, edge cases, filformater samt PDF- og HTML-generering.
    * Konkrete bugs i KI-kode (flyttallsunøyaktighet, tegnsett, uoppdagede avvik) ble identifisert og rettet manuelt (dokumentert i `docs/KVALITETSSIKRING_OG_TESTING.md`).
 4. **Frakoblet sensormodus:**
    * Applikasjonen kjører 100 % lokalt og offline via syntetiske eksempeldatasett med fasit, uten behov for eksterne API-nøkler.
@@ -36,8 +36,8 @@ Dette prosjektet leverer en automatisert webapplikasjon bygget i **Python** og *
    * Automatisk mapping mot **Norsk Standard Kontoplan (NS 4102)**.
    * Deterministisk beregning av driftsinntekter, varekostnad, bruttomargin, lønnskostnad, driftsresultat (EBIT) og driftsmargin.
    * **The AI Firewall:** *Koden regner, KI-en forklarer.* Språkmodellen (`gpt-4o-mini` via Pydantic Structured Outputs) mottar kun ferdig utregnede tall og forfatter et profesjonelt ledelsesnotat (CFO-tone) med revisjonsmerknad og strategiske tiltak.
-3. **Piksel-perfekt PDF-eksport:**
-   * Genererer en presentasjonsklar styrepakke (PDF) direkte i minnet via ReportLab.
+3. **Piksel-perfekt PDF- og HTML-eksport:**
+   * Genererer en presentasjonsklar styrepakke direkte i minnet (`io.BytesIO`) både som PDF via ReportLab og som en selvstendig, offline-klar HTML5-fil.
 
 ```text
 +------------------------------------------------------------------------------------+
@@ -45,7 +45,7 @@ Dette prosjektet leverer en automatisert webapplikasjon bygget i **Python** og *
 |  [ Driftsinntekter: 200 000 NOK ]  [ EBIT: 110 000 NOK ]  [ Margin: 55.0 % ]       |
 |  🏆 Hovedkonklusjon: Selskapet leverer en solid periode med full avstemming.       |
 |  [ 📊 Lønnsomhet ]   [ 💧 Likviditet & Arbeidskapital ]   [ 🛡️ Revisors Avstemming ]|
-|  [ 📥 Last ned Ledelsesrapport (PDF) ]                                             |
+|  [ 📥 Last ned Ledelsesrapport (PDF) ]   [ 📥 Last ned Styrepakke (HTML) ]         |
 +------------------------------------------------------------------------------------+
 ```
 
@@ -107,7 +107,7 @@ I sidepanelet til venstre i applikasjonen kan du teste hele systemet uten å las
    * Dersom du ønsker å teste med en ekte OpenAI-nøkkel, fjerner du bare avkrysningen og limer inn nøkkelen din i feltet (eller oppretter `.env` basert på `.env.example`).
 
 ### Kjøre automatiserte tester (`pytest`)
-For å kjøre samtlige **26 automatiserte enhetstester** som verifiserer regnskapslogikken, feilhåndtering, parametriserte edge cases og PDF-generering:
+For å kjøre samtlige **28 automatiserte enhetstester** som verifiserer regnskapslogikken, feilhåndtering, parametriserte edge cases samt PDF- og HTML-generering:
 ```bash
 pytest -v tests/
 ```
@@ -131,14 +131,14 @@ For å sikre full sporbarhet fra idé og krav til ferdig kode og kvalitetssikrin
 * 📄 **[docs/01_analysis/AVVIK_FRA_PROPOSAL.md](./docs/01_analysis/AVVIK_FRA_PROPOSAL.md)**: *(Sensorveiledning Kriterium 2 - 20 %)*
   * Begrunnelse for omfangsjustering fra opprinnelig proposal til v1 etter faglærers tilbakemelding.
 * 📄 **[docs/KVALITETSSIKRING_OG_TESTING.md](./docs/KVALITETSSIKRING_OG_TESTING.md)**: *(Sensorveiledning Kriterium 3 - 15 %)*
-  * Dokumentasjon av alle 26 enhetstester i pytest.
+  * Dokumentasjon av alle 28 enhetstester i pytest.
   * Tre konkrete eksempler på feil avdekket i KI-generert kode og hvordan de ble rettet (Code Review).
 * 📄 **[docs/03_ux/UX_DESIGN_OG_WIREFRAMES.md](./docs/03_ux/UX_DESIGN_OG_WIREFRAMES.md)**: *(Sensorveiledning Kriterium 4 - 10 %)*
   * Brukerreise for daglig leder, ASCII-wireframes, fargehierarki og universell utforming (WCAG).
 * 📄 **[docs/04_architecture/ARCHITECTURE.md](./docs/04_architecture/ARCHITECTURE.md)**: *(Sensorveiledning Kriterium 5 - 10 %)*
   * Teknisk systemdesign, dataflyt, "The AI Firewall" og mock-arkitektur.
 * 📄 **[docs/02_product/PRD.md](./docs/02_product/PRD.md)**:
-  * Product Requirements Document med 4 Epics, 7 User Stories og sporbarhetsmatrise.
+  * Product Requirements Document (v1.1) med 5 Epics, 8 User Stories og sporbarhetsmatrise.
 * 📄 **[data/sample/README.md](./data/sample/README.md)**:
   * Dokumentasjon av testdatasett og matematisk fasit (både balanserte filer og filer med konstruerte feil).
 
@@ -180,11 +180,12 @@ G56-guimaraes/
 │   ├── compliance_engine.py            # Balansekontroll, kryssavstemming og NS 4102
 │   ├── data_pipeline.py                # Skuddsikker fillasting (komma, semikolon, desimaler)
 │   ├── llm_integration.py              # OpenAI Pydantic Structured Outputs og mock-modus
-│   └── pdf_generator.py                # In-memory ReportLab PDF-motor
+│   ├── pdf_generator.py                # In-memory ReportLab PDF-motor
+│   └── html_report.py                  # In-memory selvstendig HTML5-styrepakke
 ├── tests/                              # Automatiserte tester (pytest)
 │   ├── test_compliance.py             # Tester for balanse, avstemming og mapping
 │   ├── test_data_pipeline.py           # Tester for semikolon, desimalkomma og feilhåndtering
-│   └── test_reporting.py               # Tester for KI-sammendrag og PDF-eksport
+│   └── test_reporting.py               # Tester for KI-sammendrag, PDF- og HTML-eksport
 ├── data/
 │   └── sample/                         # Syntetiske testdatasett med kjent fasit
 │       ├── saldobalanse_balansert.csv  # Grønn test: 100 % balanse

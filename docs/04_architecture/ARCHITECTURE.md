@@ -17,8 +17,8 @@ Teknologistakken for v1 er nøye utvalgt for å oppfylle emnets krav om enkel lo
 | **Frontend & Orkestrering** | **Streamlit (v1.38+)** | Gir rask prototyping av datatunge applikasjoner i ren Python. Eliminerer behovet for et separat JavaScript-frontend eller en kompleks REST API-arkitektur i v1. Støtter reaktiv tilstandshåndtering via `st.session_state`. |
 | **Databehandling & Regnskapsmotor** | **Pandas (v2.2+) & NumPy** | Industristandarden for tabulær databehandling i Python. Muliggjør vektoriserte operasjoner for balansekontroll ($\sum \text{Debet} = \sum \text{Kredit}$) og kryssavstemming ($IB + \Delta HB = UB$). Bruk av `np.isclose()` eliminerer flyttallsfeil i finansberegninger. |
 | **KI-integrasjon** | **OpenAI API & Pydantic (v2+)** | `gpt-4o-mini` benyttes for lynrask, kostnadseffektiv tekstformulering på norsk. Bruk av OpenAI **Structured Outputs** (`client.beta.chat.completions.parse`) sammen med Pydantic-modeller garanterer at modellen svarer i strengt definert JSON uten syntaktiske avvik. |
-| **Dokumenteksport** | **ReportLab (v4.2+)** | Gir piksel-perfekt, programmatisk generering av PDF-dokumenter direkte in-memory. Unngår eksterne C-avhengigheter (som WeasyPrint ofte krever) og sikrer sømløs kjøring på tvers av Windows, macOS og Linux. |
-| **Testrammeverk** | **pytest (v8.3+)** | Standard testverktøy for automatiserte enhetstester av balansekontroll, kryssavstemming og kontoplanmapping. |
+| **Dokumenteksport** | **ReportLab (v4.2+) & HTML5** | Gir piksel-perfekt, programmatisk generering av PDF-dokumenter samt selvstendig, responsiv HTML-styrepakke direkte in-memory (`io.BytesIO`). Unngår eksterne C-avhengigheter og sikrer sømløs kjøring på tvers av Windows, macOS og Linux. |
+| **Testrammeverk** | **pytest (v8.3+)** | Standard testverktøy for automatiserte enhetstester av balansekontroll, kryssavstemming, kontoplanmapping samt PDF- og HTML-eksport (28 tester). |
 
 ---
 
@@ -49,12 +49,17 @@ flowchart TD
     end
 
     subgraph BRANNMUR_ASSERTION ["The AI Firewall Assertion"]
-        H -.-> N["assert 'raw_transactions' not in payload<br/>assert isinstance(EBIT, (int, float))"]
+        H -.-> FW["assert 'raw_transactions' not in payload<br/>assert isinstance(EBIT, (int, float))"]
     end
 
-    M --> N["PDF Engine (ReportLab)"]
+    M --> N["PDF Engine (ReportLab)<br/>src/pdf_generator.py"]
     G --> N
-    N --> O["Styrepakke.pdf<br/>(In-Memory Download)"]
+    N --> O["Styrepakke_Ledelsesrapport.pdf<br/>(In-Memory Download)"]
+
+    M --> P["HTML Report Generator<br/>src/html_report.py"]
+    G --> P
+    E --> P
+    P --> Q["Styrepakke_Ledelsesrapport.html<br/>(In-Memory Self-Contained HTML)"]
 ```
 
 ### De tre sonene i detalj
@@ -102,9 +107,12 @@ G56-guimaraes/
 │   ├── compliance_engine.py            # Validering (Debet=Kredit), kryssavstemming og NS 4102
 │   ├── data_pipeline.py                # In-memory fillasting (CSV og Excel)
 │   ├── llm_integration.py              # OpenAI Structured Outputs og frakoblet testmodus
-│   └── pdf_generator.py                # In-memory ReportLab PDF-generering
-├── tests/                              # Automatiserte enhetstester
-│   └── test_compliance.py             # pytest-tester for regnskapslogikken
+│   ├── pdf_generator.py                # In-memory ReportLab PDF-generering
+│   └── html_report.py                  # In-memory selvstendig HTML5-styrepakke
+├── tests/                              # Automatiserte enhetstester (28 tester)
+│   ├── test_compliance.py              # pytest-tester for balanse, avstemming og nøkkeltall
+│   ├── test_data_pipeline.py           # pytest-tester for CSV/Excel og norske tallformater
+│   └── test_reporting.py               # pytest-tester for AI Firewall, Mock, PDF og HTML
 ├── .env.example                        # Mal for miljøvariabler (OPENAI_API_KEY)
 ├── .gitignore                          # Ignorerer venv, cache, .env og midlertidige filer
 ├── product-brief.md                    # Det reviderte Product Briefet

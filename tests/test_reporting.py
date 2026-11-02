@@ -9,6 +9,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../s
 
 from llm_integration import generate_management_report, ManagementCommentary
 from pdf_generator import generate_management_pdf
+from html_report import generate_management_html
+from compliance_engine import calculate_detailed_financial_metrics, reconcile_hb_with_sb, map_to_ns4102
 
 class TestReportingAndExport:
     
@@ -92,3 +94,85 @@ class TestReportingAndExport:
             "revisors_avstemmingsnotat", "potensielle_avvik", "tiltaksliste"
         }
         assert required_keys.issubset(dumped.keys())
+
+    def test_html_generation_produces_valid_self_contained_html(self):
+        """
+        Tester FR-5.1, FR-5.2, FR-5.4 og FR-5.6:
+        Åpner HTML-bufferen og verifiserer gyldig, selvstendig HTML5 uten eksterne avhengigheter,
+        med EBIT (110 000 NOK) og driftsmargin (55,0 %) fra fasit, samt XSS-escaping og norske spesialtegn.
+        """
+        sample_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../data/sample'))
+        sb = pd.read_csv(os.path.join(sample_dir, 'saldobalanse_balansert.csv'))
+        hb = pd.read_csv(os.path.join(sample_dir, 'hovedbok_balansert.csv'))
+        sb['NS4102_Kategori'] = sb['Konto'].apply(map_to_ns4102)
+
+        recon_res = reconcile_hb_with_sb(sb, hb)
+        metrics = calculate_detailed_financial_metrics(sb)
+        report = generate_management_report(sb, recon_result=recon_res, mock_mode=True)
+
+        html_buffer = generate_management_html(
+            company_name="Bedrift ÆØÅ <script>alert(1)</script> AS",
+            ai_report=report,
+            metrics=metrics,
+            recon_result=recon_res
+        )
+
+        assert isinstance(html_buffer, io.BytesIO)
+        html_text = html_buffer.getvalue().decode("utf-8")
+
+        # 1. Gyldig og selvstendig HTML5 uten eksterne ressurser
+        assert html_text.startswith("<!DOCTYPE html>")
+        assert '<html lang="nb">' in html_text
+        assert "<style>" in html_text
+        assert "</html>" in html_text
+        assert "<script src=" not in html_text
+        assert '<link rel="stylesheet"' not in html_text
+
+        # 2. XSS-sikring (FR-5.6) og norske tegn
+        assert "<script>alert(1)</script>" not in html_text
+        assert "&lt;script&gt;alert(1)&lt;/script&gt;" in html_text
+        assert "Bedrift ÆØÅ" in html_text
+
+        # 3. Fasittall for EBIT (110 000 NOK) og driftsmargin (55,0 %) (FR-5.2)
+        assert "110 000 NOK" in html_text
+        assert "55,0 %" in html_text
+
+        # 4. Grønn status og tomtilstand ved 0 avvik (FR-5.3 / FR-5.4)
+        assert "status-approved" in html_text
+        assert "Ingen avstemmingsavvik oppdaget mellom Hovedbok og Saldobalanse (0 avvik)." in html_text
+
+    def test_html_generation_includes_discrepancies_and_excludes_raw_transactions(self):
+        """
+        Tester FR-5.2 og FR-5.3:
+        Verifiserer at HTML-rapporten inneholder avvikskontoene (1500 og 1920) når testdata har avvik,
+        og at ingen rå transaksjonslinjer fra hovedboken lekker inn i HTML-en.
+        """
+        sample_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../data/sample'))
+        sb = pd.read_csv(os.path.join(sample_dir, 'saldobalanse_balansert.csv'))
+        hb_err = pd.read_csv(os.path.join(sample_dir, 'hovedbok_med_avvik.csv'))
+        sb['NS4102_Kategori'] = sb['Konto'].apply(map_to_ns4102)
+
+        recon_err = reconcile_hb_with_sb(sb, hb_err)
+        metrics = calculate_detailed_financial_metrics(sb)
+        report = generate_management_report(sb, recon_result=recon_err, mock_mode=True)
+
+        html_buffer = generate_management_html(
+            company_name="Testbedrift AS",
+            ai_report=report,
+            metrics=metrics,
+            recon_result=recon_err
+        )
+
+        html_text = html_buffer.getvalue().decode("utf-8")
+
+        # 1. Rød varselstatus og spesifikke avvikskontoer (1500 og 1920 med 30 000,00 NOK)
+        assert "status-warning" in html_text
+        assert "1500" in html_text
+        assert "1920" in html_text
+        assert "30 000,00 NOK" in html_text
+
+        # 2. Ingen rå transaksjonslinjer fra hovedboken (f.eks. tekst fra enkeltbilag i hovedbok_med_avvik.csv)
+        for raw_hb_text in ["Faktura 101", "Innbetaling kunde", "Varekjøp", "Lønnsutbetaling"]:
+            assert raw_hb_text not in html_text
+        assert "Bilagsnr" not in html_text
+

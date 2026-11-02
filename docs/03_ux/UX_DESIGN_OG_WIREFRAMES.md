@@ -94,7 +94,7 @@ Dersom det er avvik mellom Hovedbok og Saldobalanse, fanges dette i en rød adva
 |  • Lavrentekonto                       [Med] Forhandle leverandørkreditt           |
 |                                        [Lav] Flytt likviditet til rentekonto       |
 |                                                                                    |
-|  [ 📥 Last ned Ledelsesrapport (PDF) ]                                             |
+|  [ 📥 Last ned Ledelsesrapport (PDF) ]   [ 📥 Last ned Styrepakke (HTML) ]         |
 +------------------------------------------------------------------------------------+
 ```
 

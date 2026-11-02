@@ -9,7 +9,7 @@
 
 ## 1. Teststrategi og Testdekning
 
-Testregimet i prosjektet er bygget opp med **13 automatiserte enhetstester i `pytest`** som dekker alle fire Epics definert i `PRD.md`. Testene kjøres lokalt med kommandoen:
+Testregimet i prosjektet er bygget opp med **28 automatiserte enhetstester i `pytest`** som dekker alle fem Epics definert i `PRD.md` (v1.1). Testene kjøres lokalt med kommandoen:
 
 ```bash
 pytest -v tests/
@@ -21,17 +21,30 @@ pytest -v tests/
 |:---|:---|:---|:---|:---:|
 | `test_compliance.py` | `test_validate_balance_success` | Epic 1 / FR-1.3 | Bekrefter at en balansert saldobalanse godkjennes uten feil. | **PASSED** |
 | `test_compliance.py` | `test_validate_balance_failure` | Epic 1 / FR-1.3 | Bekrefter at ubalanse mellom Debet og Kredit fanges og reiser `ValueError`. | **PASSED** |
-| `test_compliance.py` | `test_validate_sample_files` | Epic 1 / DoD | Verifiserer de faktiske filene i `data/sample/` (både balansert og ubalansert). | **PASSED** |
+| `test_compliance.py` | `test_validate_sample_files` | Epic 1 / FR-1.3 | Verifiserer de faktiske filene i `data/sample/` (både balansert og ubalansert). | **PASSED** |
 | `test_compliance.py` | `test_reconciliation_happy_path` | Epic 2 / FR-2.1 | Verifiserer at $IB + \Delta HB = UB$ gir 0 avvik for balansert datasett. | **PASSED** |
-| `test_compliance.py` | `test_reconciliation_detects_discrepancy` | Epic 2 / FR-2.1 | Verifiserer at differanser på konto 1500 og 1920 fanges med nøyaktig beløp ($\pm 30\ 000$). | **PASSED** |
+| `test_compliance.py` | `test_reconciliation_detects_discrepancy` | Epic 2 / FR-2.2 | Verifiserer at differanser på konto 1500 og 1920 fanges med nøyaktig beløp ($\pm 30\ 000$). | **PASSED** |
 | `test_compliance.py` | `test_ns4102_mapping` | Epic 2 / FR-2.3 | Tester mapping av 4-sifrede norske kontonumre til korrekte NS 4102-kategorier. | **PASSED** |
+| `test_compliance.py` | `test_reconciliation_account_only_in_hb_detected` | Epic 2 / FR-2.1 | Edge case: Konto som kun eksisterer i Hovedboken fanges opp via outer join. | **PASSED** |
+| `test_compliance.py` | `test_reconciliation_account_only_in_sb_with_zero_movement` | Epic 2 / FR-2.1 | Edge case: Konto kun i SB uten bevegelse ($IB == UB$) avstemmes som godkjent. | **PASSED** |
+| `test_compliance.py` | `test_calculate_detailed_financial_metrics` | Epic 2 / FR-2.4 | Verifiserer deterministisk utregning av driftsinntekter, kostnader, EBIT, marginer og arbeidskapital. | **PASSED** |
+| `test_data_pipeline.py` | `test_parametrized_invalid_csv_inputs` (3 cases) | Epic 1 / FR-1.2 | Parametrisert test for tom CSV, manglende Konto-kolonne og manglende beløpskolonner. | **PASSED** |
+| `test_data_pipeline.py` | `test_validate_input_detects_empty_dataframe` | Epic 1 / FR-1.2 | Verifiserer at tomme DataFrames avvises med forklarende feilmelding. | **PASSED** |
+| `test_data_pipeline.py` | `test_large_numbers_and_norwegian_special_characters_pdf` | Epic 4 / FR-4.1 | Tester at milliardbeløp og norske spesialtegn (`ÆØÅ`) rendres feilfritt i PDF. | **PASSED** |
+| `test_data_pipeline.py` | `test_excel_file_processing` | Epic 1 / FR-1.1 | Verifiserer in-memory innlesing og normalisering av `.xlsx`-filer. | **PASSED** |
 | `test_data_pipeline.py` | `test_norwegian_semicolon_and_comma_decimal` | Epic 1 / FR-1.1 | Tester autodeteksjon av semikolon (`;`), tusenskilletegn (`100 000,00`) og norsk desimalkomma. | **PASSED** |
 | `test_data_pipeline.py` | `test_missing_account_column_raises_clear_error` | Epic 1 / FR-1.2 | Verifiserer at manglende `Konto`-kolonne gir en pedagogisk feilmelding fremfor krasj. | **PASSED** |
 | `test_data_pipeline.py` | `test_empty_file_raises_clear_error` | Epic 1 / FR-1.1 | Sikrer at tomme filer avvises kontrollert med beskrivende feilmelding. | **PASSED** |
-| `test_data_pipeline.py` | `test_clean_norwegian_numeric_series` | Epic 1 / NFR-2.1 | Tester parsing av tallstrenger med ulike formater (`1 500,50`, `15.000,25`, osv.). | **PASSED** |
+| `test_data_pipeline.py` | `test_clean_norwegian_numeric_series` | Epic 1 / FR-1.1 | Tester parsing av tallstrenger med ulike formater (`1 500,50`, `15.000,25`, osv.). | **PASSED** |
+| `test_data_pipeline.py` | `test_norwegian_erp_column_variations` | Epic 1 / FR-1.2 | Tester normalisering av kolonnenavn fra Tripletex/Visma (`Konto ID`, `Debetbeløp`, osv.). | **PASSED** |
+| `test_data_pipeline.py` | `test_mixed_decimal_and_spaces_in_currency` | Epic 1 / FR-1.1 | Tester tallparsing med ledende/etterfølgende mellomrom og blandede skilletegn. | **PASSED** |
 | `test_reporting.py` | `test_mock_mode_generates_valid_commentary` | Epic 3 / FR-3.3 | Verifiserer at frakoblet mock-modus returnerer et komplett Pydantic-validert objekt. | **PASSED** |
-| `test_reporting.py` | `test_mock_mode_with_discrepancies` | Epic 3 / FR-3.1 | Verifiserer at KI-rapporten automatisk tilpasser revisjonsadvarselen dersom det er avvik. | **PASSED** |
+| `test_reporting.py` | `test_mock_mode_with_discrepancies` | Epic 3 / FR-3.3 | Verifiserer at KI-rapporten automatisk tilpasser revisjonsadvarselen dersom det er avvik. | **PASSED** |
 | `test_reporting.py` | `test_pdf_generation_produces_valid_pdf_buffer` | Epic 4 / FR-4.1 | Verifiserer at PDF-motoren produserer en gyldig binær PDF-strøm (`%PDF-`) in-memory. | **PASSED** |
+| `test_reporting.py` | `test_ai_firewall_context_never_contains_raw_transactions` | Epic 3 / FR-3.1 | Verifiserer at KI-payload aldri inneholder råtransaksjoner og at EBIT er deterministisk. | **PASSED** |
+| `test_reporting.py` | `test_pydantic_schema_consistency_between_mock_and_class` | Epic 3 / FR-3.2 | Sikrer at Mock-modus produserer nøyaktig samme Pydantic-skjema som live OpenAI API. | **PASSED** |
+| `test_reporting.py` | `test_html_generation_produces_valid_self_contained_html` | Epic 5 / FR-5.1–5.6 | Verifiserer gyldig HTML5 i minnet, EBIT/driftsmargin fra fasit, grønn tomtilstand og `html.escape()`. | **PASSED** |
+| `test_reporting.py` | `test_html_generation_includes_discrepancies_and_excludes_raw_transactions` | Epic 5 / FR-5.2–5.3 | Verifiserer at avvikskontoer (`1500`/`1920`) vises i HTML ved avvik, og at råtransaksjoner aldri lekker. | **PASSED** |
 
 ---
 

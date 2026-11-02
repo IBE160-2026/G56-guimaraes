@@ -8,6 +8,7 @@ from data_pipeline import process_csv_in_memory, process_excel_in_memory, valida
 from compliance_engine import validate_balance, map_to_ns4102, reconcile_hb_with_sb
 from llm_integration import generate_management_report
 from pdf_generator import generate_management_pdf
+from html_report import generate_management_html
 
 logger = setup_app_logging()
 
@@ -241,19 +242,37 @@ if sb_df is not None and hb_df is not None:
                             )
                             st.divider()
                             
-                    # PDF Eksport
+                    # PDF og HTML Eksport
                     st.markdown("---")
                     st.subheader("📄 Eksport til Styret")
                     import pdf_generator
+                    import html_report
                     importlib.reload(pdf_generator)
+                    importlib.reload(html_report)
                     pdf_buffer = pdf_generator.generate_management_pdf(company_name="Bedrift AS", ai_report=report)
-                    st.download_button(
-                        label="📥 Last ned Ledelsesrapport (PDF)",
-                        data=pdf_buffer,
-                        file_name="Styrepakke_Ledelsesrapport.pdf",
-                        mime="application/pdf",
-                        type="primary"
+                    html_buffer = html_report.generate_management_html(
+                        company_name="Bedrift AS",
+                        ai_report=report,
+                        metrics=metrics,
+                        recon_result=recon_result
                     )
+                    col_dl1, col_dl2 = st.columns(2)
+                    with col_dl1:
+                        st.download_button(
+                            label="📥 Last ned Ledelsesrapport (PDF)",
+                            data=pdf_buffer,
+                            file_name="Styrepakke_Ledelsesrapport.pdf",
+                            mime="application/pdf",
+                            type="primary"
+                        )
+                    with col_dl2:
+                        st.download_button(
+                            label="📥 Last ned Styrepakke (HTML)",
+                            data=html_buffer,
+                            file_name="Styrepakke_Ledelsesrapport.html",
+                            mime="text/html",
+                            type="secondary"
+                        )
                 except Exception as e:
                     st.error(f"Feil ved generering av rapport: {e}")
                     
