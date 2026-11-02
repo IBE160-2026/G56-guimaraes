@@ -2,10 +2,14 @@ import streamlit as st
 import pandas as pd
 import io
 import os
-import logging
 from app_logging import setup_app_logging
 from data_pipeline import process_csv_in_memory, process_excel_in_memory, validate_input
-from compliance_engine import validate_balance, map_to_ns4102, reconcile_hb_with_sb
+from compliance_engine import (
+    validate_balance,
+    map_to_ns4102,
+    reconcile_hb_with_sb,
+    calculate_detailed_financial_metrics,
+)
 from llm_integration import generate_management_report
 from pdf_generator import generate_management_pdf
 from html_report import generate_management_html
@@ -30,6 +34,7 @@ st.markdown(
 # Sidebar for innstillinger og hurtiglasting
 with st.sidebar:
     st.header("⚙️ Konfigurasjon & Sensormodus")
+    company_name = st.text_input("Selskapsnavn:", value="Bedrift AS")
     demo_mode = st.radio(
         "Velg datakilde:",
         [
@@ -165,7 +170,6 @@ if sb_df is not None and hb_df is not None:
             sb_mapped['NS4102_Kategori'] = sb_mapped['Konto'].apply(map_to_ns4102)
             
         # Deterministisk nøkkeltallsberegning via felles motor
-        from compliance_engine import calculate_detailed_financial_metrics
         metrics = calculate_detailed_financial_metrics(sb_mapped)
         
         col_m1, col_m2, col_m3, col_m4 = st.columns(4)
@@ -192,11 +196,7 @@ if sb_df is not None and hb_df is not None:
         if st.button("🚀 Generer Strategisk Ledelsesrapport (KI)", type="primary"):
             with st.spinner("CFO-Agent analyserer regnskapet og avstemmingsgrunnlaget..."):
                 try:
-                    import llm_integration
-                    import importlib
-                    importlib.reload(llm_integration)
-                    
-                    report = llm_integration.generate_management_report(
+                    report = generate_management_report(
                         sb_mapped, 
                         recon_result=recon_result,
                         api_key=openai_api_key if not use_mock_ai else None,
@@ -245,13 +245,14 @@ if sb_df is not None and hb_df is not None:
                     # PDF og HTML Eksport
                     st.markdown("---")
                     st.subheader("📄 Eksport til Styret")
-                    import pdf_generator
-                    import html_report
-                    importlib.reload(pdf_generator)
-                    importlib.reload(html_report)
-                    pdf_buffer = pdf_generator.generate_management_pdf(company_name="Bedrift AS", ai_report=report)
-                    html_buffer = html_report.generate_management_html(
-                        company_name="Bedrift AS",
+                    pdf_buffer = generate_management_pdf(
+                        company_name=company_name,
+                        ai_report=report,
+                        ns4102_summary=metrics,
+                        recon_result=recon_result
+                    )
+                    html_buffer = generate_management_html(
+                        company_name=company_name,
                         ai_report=report,
                         metrics=metrics,
                         recon_result=recon_result

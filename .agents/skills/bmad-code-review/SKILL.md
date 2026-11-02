@@ -12,7 +12,7 @@ Denne ferdigheten representerer **Kvalitetssikringsrollen** i BMAD-rammeverket f
 ## Ansvarsområder
 1. **Automatisert testing (pytest):**
    * Kjøre og verifisere testsuiten (`pytest -v tests/`).
-   * Sikre at alle 13 enhetstester dekker balansekontroll, kryssavstemming, semikolon-parsing og PDF-generering.
+   * Sikre at alle 30 enhetstester dekker balansekontroll, kryssavstemming, semikolon-parsing samt PDF- og HTML-generering.
 2. **Kritisk overstyring av KI:**
    * Gjennomgå all KI-skrevet kode for regresjonsfeil, flyttallsunøyaktigheter og ugyldige antagelser.
    * Dokumentere feil og løsninger i `docs/KVALITETSSIKRING_OG_TESTING.md`.

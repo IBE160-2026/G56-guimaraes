@@ -59,10 +59,16 @@ class TestReportingAndExport:
         assert "feil" in report.revisors_avstemmingsnotat.lower()
 
     def test_pdf_generation_produces_valid_pdf_buffer(self, sample_mapped_df):
-        """Tester at PDF-motoren bygger et gyldig PDF-dokument in-memory med ny layout."""
+        """Tester at PDF-motoren bygger et gyldig PDF-dokument in-memory med nøkkeltall og avvikstabell."""
         recon_mock = {"is_reconciled": True, "discrepancy_count": 0}
+        metrics = calculate_detailed_financial_metrics(sample_mapped_df)
         report = generate_management_report(sample_mapped_df, recon_result=recon_mock, mock_mode=True)
-        pdf_buffer = generate_management_pdf(company_name="Testbedrift AS", ai_report=report)
+        pdf_buffer = generate_management_pdf(
+            company_name="Testbedrift AS",
+            ai_report=report,
+            ns4102_summary=metrics,
+            recon_result=recon_mock
+        )
         
         assert isinstance(pdf_buffer, io.BytesIO)
         pdf_bytes = pdf_buffer.getvalue()
@@ -175,4 +181,67 @@ class TestReportingAndExport:
         for raw_hb_text in ["Faktura 101", "Innbetaling kunde", "Varekjøp", "Lønnsutbetaling"]:
             assert raw_hb_text not in html_text
         assert "Bilagsnr" not in html_text
+
+    def test_live_api_flow_with_mocked_openai_client(self, sample_mapped_df):
+        """
+        Tester live OpenAI-stien (mock_mode=False) med mocket OpenAI-klient
+        slik at execute_openai_with_retry og post_validate_ai_response verifiseres ende-til-ende.
+        """
+        from unittest.mock import MagicMock, patch
+
+        recon_mock = {"is_reconciled": True, "discrepancy_count": 0}
+        expected_report = generate_management_report(sample_mapped_df, recon_result=recon_mock, mock_mode=True)
+
+        mock_completion = MagicMock()
+        mock_completion.choices = [MagicMock()]
+        mock_completion.choices[0].message.parsed = expected_report
+
+        with patch("llm_integration.OpenAI") as mock_openai_cls:
+            mock_client = MagicMock()
+            mock_client.beta.chat.completions.parse.return_value = mock_completion
+            mock_openai_cls.return_value = mock_client
+
+            live_report = generate_management_report(
+                sample_mapped_df,
+                recon_result=recon_mock,
+                api_key="sk-test-valid-key",
+                mock_mode=False
+            )
+
+            assert isinstance(live_report, ManagementCommentary)
+            assert live_report.hovedkonklusjon == expected_report.hovedkonklusjon
+            mock_client.beta.chat.completions.parse.assert_called_once()
+
+    def test_post_validate_ai_response_catches_contradictions(self, sample_mapped_df):
+        """
+        Tester at post_validate_ai_response reiser ValueError dersom KI-rapporten
+        påstår alvorlige avvik ved godkjent avstemming, eller unnlater å varsle ved avvik.
+        """
+        from llm_integration import post_validate_ai_response
+
+        good_report = generate_management_report(
+            sample_mapped_df,
+            recon_result={"is_reconciled": True, "discrepancy_count": 0},
+            mock_mode=True
+        )
+
+        # 1. KI hevder "alvorlige avvik" til tross for godkjent status -> ValueError
+        contradicting_approved = good_report.model_copy(
+            update={"hovedkonklusjon": "Det er oppdaget alvorlige avvik i regnskapet."}
+        )
+        ctx_approved = {"avstemming_hovedbok_mot_saldobalanse": {"status": "GODKJENT (100% konsistent)"}}
+        with pytest.raises(ValueError, match="Kvalitetssikringsfeil"):
+            post_validate_ai_response(contradicting_approved, ctx_approved)
+
+        # 2. KI unnlater å nevne avvik/feil til tross for "AVVIK OPPDAGET" -> ValueError
+        contradicting_warning = good_report.model_copy(
+            update={
+                "hovedkonklusjon": "Alt ser strålende ut i perioden.",
+                "revisors_avstemmingsnotat": "Alt stemmer helt fint."
+            }
+        )
+        ctx_discrepancy = {"avstemming_hovedbok_mot_saldobalanse": {"status": "AVVIK OPPDAGET"}}
+        with pytest.raises(ValueError, match="Kvalitetssikringsfeil"):
+            post_validate_ai_response(contradicting_warning, ctx_discrepancy)
+
 

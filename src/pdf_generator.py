@@ -4,11 +4,25 @@ from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
-def generate_management_pdf(company_name: str, ai_report, ns4102_summary: dict = None) -> io.BytesIO:
+def _fmt_nok_pdf(value: float, decimals: int = 0) -> str:
+    val = float(value or 0.0)
+    if decimals == 0:
+        formatted = f"{val:,.0f}".replace(",", " ")
+    else:
+        formatted = f"{val:,.{decimals}f}".replace(",", " ").replace(".", ",")
+    return f"{formatted} NOK"
+
+
+def generate_management_pdf(
+    company_name: str,
+    ai_report,
+    ns4102_summary: dict = None,
+    recon_result: dict = None
+) -> io.BytesIO:
     """
     TOP 10% TYPOGRAPHY PATTERN:
     Genererer en formell, profesjonell styrepakke (PDF) direkte in-memory.
-    Rendrer dype CFO-analyser, marginer, arbeidskapital og revisors avstemmingsstatus.
+    Rendrer deterministisk nøkkeltallstabell, avstemmingsstatus/avvikstabell og dype CFO-analyser.
     """
     buffer = io.BytesIO()
     
@@ -93,6 +107,80 @@ def generate_management_pdf(company_name: str, ai_report, ns4102_summary: dict =
     ]))
     elements.append(callout_table)
     elements.append(Spacer(1, 10))
+
+    # 2b. Nøkkeltallstabell (Deterministisk fra Python dersom ns4102_summary/metrics er oppgitt)
+    if ns4102_summary and isinstance(ns4102_summary, dict):
+        elements.append(Paragraph("Nøkkeltall (Deterministisk beregnet etter NS 4102)", section_heading))
+        kpi_data = [
+            [
+                Paragraph("<b>Driftsinntekter</b>", body_style),
+                Paragraph(_fmt_nok_pdf(ns4102_summary.get("driftsinntekter", 0.0)), body_style),
+                Paragraph("<b>Bruttofortjeneste</b>", body_style),
+                Paragraph(_fmt_nok_pdf(ns4102_summary.get("bruttofortjeneste", 0.0)), body_style),
+            ],
+            [
+                Paragraph("<b>Driftskostnader</b>", body_style),
+                Paragraph(_fmt_nok_pdf(ns4102_summary.get("samlede_driftskostnader", 0.0)), body_style),
+                Paragraph("<b>Bruttomargin</b>", body_style),
+                Paragraph(f"{float(ns4102_summary.get('bruttomargin', 0.0)):.1f} %".replace(".", ","), body_style),
+            ],
+            [
+                Paragraph("<b>Driftsresultat (EBIT)</b>", body_style),
+                Paragraph(_fmt_nok_pdf(ns4102_summary.get("ebit", 0.0)), body_style),
+                Paragraph("<b>Arbeidskapital</b>", body_style),
+                Paragraph(_fmt_nok_pdf(ns4102_summary.get("arbeidskapital", 0.0)), body_style),
+            ],
+            [
+                Paragraph("<b>Driftsmargin</b>", body_style),
+                Paragraph(f"{float(ns4102_summary.get('driftsmargin', 0.0)):.1f} %".replace(".", ","), body_style),
+                Paragraph("<b>Likviditetsgrad 1</b>", body_style),
+                Paragraph(f"{float(ns4102_summary.get('likviditetsgrad_1', 0.0)):.2f}".replace(".", ","), body_style),
+            ],
+        ]
+        kpi_table = Table(kpi_data, colWidths=[125, 132, 125, 133])
+        kpi_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor("#f8fafc")),
+            ('BACKGROUND', (2, 0), (2, -1), colors.HexColor("#f8fafc")),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ]))
+        elements.append(kpi_table)
+        elements.append(Spacer(1, 8))
+
+    # 2c. Avvikstabell dersom kryssavstemming har avdekket feil
+    if recon_result and not recon_result.get("is_reconciled", True):
+        disc_df = recon_result.get("discrepancies")
+        if disc_df is not None and not disc_df.empty:
+            elements.append(Paragraph("Avvikstabell: Kryssavstemming Hovedbok mot Saldobalanse", section_heading))
+            disc_rows = [[
+                Paragraph("<b>Konto</b>", body_style),
+                Paragraph("<b>Kontonavn</b>", body_style),
+                Paragraph("<b>IB</b>", body_style),
+                Paragraph("<b>Netto HB</b>", body_style),
+                Paragraph("<b>Beregnet UB</b>", body_style),
+                Paragraph("<b>UB (SB)</b>", body_style),
+                Paragraph("<b>Avvik</b>", body_style),
+            ]]
+            for _, row in disc_df.iterrows():
+                disc_rows.append([
+                    Paragraph(str(row.get("Konto", "")), body_style),
+                    Paragraph(str(row.get("Kontonavn", "")), body_style),
+                    Paragraph(_fmt_nok_pdf(row.get("IB", 0.0), 2), body_style),
+                    Paragraph(_fmt_nok_pdf(row.get("Netto_HB", 0.0), 2), body_style),
+                    Paragraph(_fmt_nok_pdf(row.get("Beregnet_UB", 0.0), 2), body_style),
+                    Paragraph(_fmt_nok_pdf(row.get("UB", 0.0), 2), body_style),
+                    Paragraph(f"<font color='#b91c1c'><b>{_fmt_nok_pdf(row.get('Avvik', 0.0), 2)}</b></font>", body_style),
+                ])
+            disc_table = Table(disc_rows, colWidths=[45, 95, 75, 75, 75, 75, 75])
+            disc_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#fef2f2")),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
+                ('TOPPADDING', (0, 0), (-1, -1), 4),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ]))
+            elements.append(disc_table)
+            elements.append(Spacer(1, 8))
     
     # 3. Lønnsomhet & Marginer
     elements.append(Paragraph("1. Lønnsomhets- og Marginanalyse", section_heading))

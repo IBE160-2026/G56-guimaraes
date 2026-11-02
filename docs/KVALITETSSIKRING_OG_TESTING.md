@@ -9,7 +9,7 @@
 
 ## 1. Teststrategi og Testdekning
 
-Testregimet i prosjektet er bygget opp med **28 automatiserte enhetstester i `pytest`** som dekker alle fem Epics definert i `PRD.md` (v1.1). Testene kjøres lokalt med kommandoen:
+Testregimet i prosjektet er bygget opp med **30 automatiserte enhetstester i `pytest`** som dekker alle fem Epics definert i `PRD.md` (v1.1). Testene kjøres lokalt med kommandoen:
 
 ```bash
 pytest -v tests/
@@ -40,17 +40,19 @@ pytest -v tests/
 | `test_data_pipeline.py` | `test_mixed_decimal_and_spaces_in_currency` | Epic 1 / FR-1.1 | Tester tallparsing med ledende/etterfølgende mellomrom og blandede skilletegn. | **PASSED** |
 | `test_reporting.py` | `test_mock_mode_generates_valid_commentary` | Epic 3 / FR-3.3 | Verifiserer at frakoblet mock-modus returnerer et komplett Pydantic-validert objekt. | **PASSED** |
 | `test_reporting.py` | `test_mock_mode_with_discrepancies` | Epic 3 / FR-3.3 | Verifiserer at KI-rapporten automatisk tilpasser revisjonsadvarselen dersom det er avvik. | **PASSED** |
-| `test_reporting.py` | `test_pdf_generation_produces_valid_pdf_buffer` | Epic 4 / FR-4.1 | Verifiserer at PDF-motoren produserer en gyldig binær PDF-strøm (`%PDF-`) in-memory. | **PASSED** |
+| `test_reporting.py` | `test_pdf_generation_produces_valid_pdf_buffer` | Epic 4 / FR-4.1 | Verifiserer at PDF-motoren produserer en gyldig binær PDF-strøm (`%PDF-`) in-memory med nøkkeltall. | **PASSED** |
 | `test_reporting.py` | `test_ai_firewall_context_never_contains_raw_transactions` | Epic 3 / FR-3.1 | Verifiserer at KI-payload aldri inneholder råtransaksjoner og at EBIT er deterministisk. | **PASSED** |
 | `test_reporting.py` | `test_pydantic_schema_consistency_between_mock_and_class` | Epic 3 / FR-3.2 | Sikrer at Mock-modus produserer nøyaktig samme Pydantic-skjema som live OpenAI API. | **PASSED** |
 | `test_reporting.py` | `test_html_generation_produces_valid_self_contained_html` | Epic 5 / FR-5.1–5.6 | Verifiserer gyldig HTML5 i minnet, EBIT/driftsmargin fra fasit, grønn tomtilstand og `html.escape()`. | **PASSED** |
 | `test_reporting.py` | `test_html_generation_includes_discrepancies_and_excludes_raw_transactions` | Epic 5 / FR-5.2–5.3 | Verifiserer at avvikskontoer (`1500`/`1920`) vises i HTML ved avvik, og at råtransaksjoner aldri lekker. | **PASSED** |
+| `test_reporting.py` | `test_live_api_flow_with_mocked_openai_client` | Epic 3 / FR-3.2 | Verifiserer live OpenAI-stien (`mock_mode=False`) ende-til-ende via `unittest.mock.patch`. | **PASSED** |
+| `test_reporting.py` | `test_post_validate_ai_response_catches_contradictions` | Epic 3 / FR-3.2 | Verifiserer at `post_validate_ai_response()` avviser KI-svar som motsier avstemmingsstatusen. | **PASSED** |
 
 ---
 
 ## 2. Konkrete Eksempler på Feil i KI-generert Kode og Retting (Code Review)
 
-Sensorveiledningen krever dokumentasjon av feil som ble funnet i KI-generert kode og hvordan gruppen rettet dem. Her er tre sentrale eksempler:
+Sensorveiledningen krever dokumentasjon av feil som ble funnet i KI-generert kode og hvordan gruppen rettet dem. Her er fire sentrale eksempler:
 
 ### Eksempel 1: Flyttallsfeil i regnskapsavstemming (Floating Point Inexactness)
 * **Feil funnet i KI-koden:** 
@@ -69,28 +71,25 @@ Sensorveiledningen krever dokumentasjon av feil som ble funnet i KI-generert kod
   ```
   Dette tillater avrundingsdifferanser under 1 øre, som er standard i finansiell revisjon.
 
-### Eksempel 2: Modul-caching i Streamlit (`unexpected keyword argument`)
-* **Feil funnet i KI-koden:**
-  Da vi utvidet `generate_management_report()` med parameteren `recon_result`, krasjet Streamlit med:
-  `TypeError: generate_management_report() got an unexpected keyword argument 'recon_result'`.
-* **Hvorfor det feilet:**
-  Streamlit overvåker og reloader kun `app.py`, men beholder underliggende moduler (`src/llm_integration.py`) i `sys.modules`. Dermed benyttet appen den gamle funksjonssignaturen som lå i minnet fra serverstart.
+### Eksempel 2: Feilplasserte hjelpefunksjoner og død kode i `src/llm_integration.py`
+* **Feil funnet i KI-koden under Code Review:**
+  Da KI-assistenten la til hjelpefunksjonene `post_validate_ai_response()` og `execute_openai_with_retry()`, ble disse skutt inn *mellom* mock-blokken (`if mock_mode...`) og live OpenAI-blokken inne i `generate_management_report()`. Dermed ble live API-koden (`context_json = json.dumps(...)`) liggende på slutten av `execute_openai_with_retry()` som uoppnåelig kode, samtidig som `build_financial_context()` fikk en duplisert `assert`/`return`-blokk.
+* **Hvorfor det ikke ble fanget tidligere:**
+  De opprinnelige enhetstestene testet kun `mock_mode=True`, som returnerte tidlig i funksjonen.
 * **Hvordan vi rettet det:**
-  Vi implementerte to forsvarsmekanismer:
-  1. I `src/llm_integration.py` la vi til `**kwargs` for bakoverkompatibilitet.
-  2. I `src/app.py` la vi inn tvungen dynamisk oppdatering:
-     ```python
-     import llm_integration
-     import importlib
-     importlib.reload(llm_integration)
-     ```
-  Dette garanterer at endringer i logikk umiddelbart slår igjennom i grensesnittet uten krasj.
+  Vi flyttet `post_validate_ai_response()` og `execute_openai_with_retry()` ut som selvstendige toppnivå-funksjoner *før* `generate_management_report()`, fjernet de dupliserte linjene, og skrev to nye enhetstester (`test_live_api_flow_with_mocked_openai_client` med `unittest.mock.patch` og `test_post_validate_ai_response_catches_contradictions`) som verifiserer live-stien uten ekte nettverkskall.
 
 ### Eksempel 3: Særnorske eksportformater fra Fiken/Tripletex
 * **Feil funnet i KI-koden:**
   KI-en antok at CSV-filer alltid er komma-separerte med punktum som desimal. Da vi testet en reell eksport fra et norsk regnskapssystem, feilet innlesingen fullstendig fordi filen brukte semikolon (`;`) og formatet `100 000,00`.
 * **Hvordan vi rettet det:**
   Vi bygget `detect_csv_delimiter_and_encoding()` og `clean_norwegian_numeric_series()` i `src/data_pipeline.py`. Funksjonen sniffer de første 8 KB av filen, gjenkjenner semikolon og håndterer både mellomrom som tusenskilletegn og komma som desimalskilletegn.
+
+### Eksempel 4: Konsistens mellom PDF- og HTML-styrepakke
+* **Feil funnet i KI-koden:**
+  Opprinnelig versjon av `generate_management_pdf()` tok imot `ns4102_summary: dict = None`, men brukte aldri parameteren, slik at nøkkeltallstabellen og avvikstabellen manglet i PDF-en.
+* **Hvordan vi rettet det:**
+  Vi utvidet `src/pdf_generator.py` til å rendre både den deterministiske nøkkeltallstabellen (`ns4102_summary`) og avvikstabellen (`recon_result`), slik at PDF og HTML (`src/html_report.py`) presenterer nøyaktig samme verifiserte tallgrunnlag.
 
 ---
 

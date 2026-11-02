@@ -18,7 +18,7 @@ Teknologistakken for v1 er nøye utvalgt for å oppfylle emnets krav om enkel lo
 | **Databehandling & Regnskapsmotor** | **Pandas (v2.2+) & NumPy** | Industristandarden for tabulær databehandling i Python. Muliggjør vektoriserte operasjoner for balansekontroll ($\sum \text{Debet} = \sum \text{Kredit}$) og kryssavstemming ($IB + \Delta HB = UB$). Bruk av `np.isclose()` eliminerer flyttallsfeil i finansberegninger. |
 | **KI-integrasjon** | **OpenAI API & Pydantic (v2+)** | `gpt-4o-mini` benyttes for lynrask, kostnadseffektiv tekstformulering på norsk. Bruk av OpenAI **Structured Outputs** (`client.beta.chat.completions.parse`) sammen med Pydantic-modeller garanterer at modellen svarer i strengt definert JSON uten syntaktiske avvik. |
 | **Dokumenteksport** | **ReportLab (v4.2+) & HTML5** | Gir piksel-perfekt, programmatisk generering av PDF-dokumenter samt selvstendig, responsiv HTML-styrepakke direkte in-memory (`io.BytesIO`). Unngår eksterne C-avhengigheter og sikrer sømløs kjøring på tvers av Windows, macOS og Linux. |
-| **Testrammeverk** | **pytest (v8.3+)** | Standard testverktøy for automatiserte enhetstester av balansekontroll, kryssavstemming, kontoplanmapping samt PDF- og HTML-eksport (28 tester). |
+| **Testrammeverk** | **pytest (v8.3+)** | Standard testverktøy for automatiserte enhetstester av balansekontroll, kryssavstemming, kontoplanmapping samt PDF- og HTML-eksport (30 tester). |
 
 ---
 
@@ -109,7 +109,7 @@ G56-guimaraes/
 │   ├── llm_integration.py              # OpenAI Structured Outputs og frakoblet testmodus
 │   ├── pdf_generator.py                # In-memory ReportLab PDF-generering
 │   └── html_report.py                  # In-memory selvstendig HTML5-styrepakke
-├── tests/                              # Automatiserte enhetstester (28 tester)
+├── tests/                              # Automatiserte enhetstester (30 tester)
 │   ├── test_compliance.py              # pytest-tester for balanse, avstemming og nøkkeltall
 │   ├── test_data_pipeline.py           # pytest-tester for CSV/Excel og norske tallformater
 │   └── test_reporting.py               # pytest-tester for AI Firewall, Mock, PDF og HTML

@@ -19,7 +19,7 @@ Arkitekturen reduserer risikoen for tallhallusinasjoner ved at alle økonomiske 
 
 ## 2. Fem Konkrete Eksempler på Kritisk Styring og Korrigering av KI
 
-Sensorveiledningen legger avgjørende vekt på at gruppen ikke bare aksepterer KI-forslag ukritisk, men aktivt vurderer, korrigerer og styrer KI. Her er fire sentrale iterasjoner:
+Sensorveiledningen legger avgjørende vekt på at gruppen ikke bare aksepterer KI-forslag ukritisk, men aktivt vurderer, korrigerer og styrer KI. Her er fem sentrale iterasjoner:
 
 ### Iterasjon 1: Kritisk nedskalering av scope (Fra overambisiøs KI til fokusert kjerne)
 * **KI-ens opprinnelige forslag:** KI-assistenten foreslo opprinnelig å bygge en massiv plattform med fem filtyper (saldobalanse, reskontro, timelister, CRM, ESG), SAF-T XML-parsing, flervaluta og Stripe-abonnementsbetaling i v1.
@@ -116,7 +116,7 @@ flowchart LR
 ```
 
 1. **`01_analysis/`:** Analyse av forretningsdomenet, GRS/IFRS og begrunnelse for avvik fra proposal.
-2. **`02_product/PRD.md`:** 4 Epics, 7 User Stories, funksjonelle formelkrav ($IB + HB = UB$) og testmatrise (Definition of Done).
+2. **`02_product/PRD.md`:** 5 Epics, 8 User Stories, funksjonelle formelkrav ($IB + HB = UB$), HTML- og PDF-eksport og sporbarhetsmatrise.
 3. **`03_ux/`:** Wireframes, informasjonsarkitektur og universell utforming for Streamlit-dashbordet.
 4. **`04_architecture/ARCHITECTURE.md`:** Dataflyt, AI Firewall, systemgrenser og mock-arkitektur.
-5. **`tests/`:** 26 automatiserte tester som verifiserer koden mot PRD-kravene.
+5. **`tests/`:** 30 automatiserte tester som verifiserer koden mot PRD-kravene.

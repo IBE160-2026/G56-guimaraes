@@ -18,7 +18,7 @@ Dette prosjektet er utviklet for å demonstrere samtlige kjernekompetanser i **I
    * Ingen språkmodell utfører summeringer eller regnskapskontroll.
    * Dobbelt bokføring ($\sum D = \sum K$) og kryssavstemming ($IB + \Delta HB = UB$) skjer 100 % deterministisk i Python/Pandas. Runtime-LLM (`gpt-4o-mini`) mottar utelukkende ferdig aggregerte nøkkeltall og valideres via Pydantic.
 3. **Kvalitetssikring og feilretting av KI-generert kode:**
-   * 28 automatiserte enhetstester (`pytest`) dekker balansekontroll, kryssavstemming, edge cases, filformater samt PDF- og HTML-generering.
+   * 30 automatiserte enhetstester (`pytest`) dekker balansekontroll, kryssavstemming, edge cases, filformater samt PDF- og HTML-generering.
    * Konkrete bugs i KI-kode (flyttallsunøyaktighet, tegnsett, uoppdagede avvik) ble identifisert og rettet manuelt (dokumentert i `docs/KVALITETSSIKRING_OG_TESTING.md`).
 4. **Frakoblet sensormodus:**
    * Applikasjonen kjører 100 % lokalt og offline via syntetiske eksempeldatasett med fasit, uten behov for eksterne API-nøkler.
@@ -107,7 +107,7 @@ I sidepanelet til venstre i applikasjonen kan du teste hele systemet uten å las
    * Dersom du ønsker å teste med en ekte OpenAI-nøkkel, fjerner du bare avkrysningen og limer inn nøkkelen din i feltet (eller oppretter `.env` basert på `.env.example`).
 
 ### Kjøre automatiserte tester (`pytest`)
-For å kjøre samtlige **28 automatiserte enhetstester** som verifiserer regnskapslogikken, feilhåndtering, parametriserte edge cases samt PDF- og HTML-generering:
+For å kjøre samtlige **30 automatiserte enhetstester** som verifiserer regnskapslogikken, feilhåndtering, parametriserte edge cases samt PDF- og HTML-generering:
 ```bash
 pytest -v tests/
 ```
@@ -131,8 +131,8 @@ For å sikre full sporbarhet fra idé og krav til ferdig kode og kvalitetssikrin
 * 📄 **[docs/01_analysis/AVVIK_FRA_PROPOSAL.md](./docs/01_analysis/AVVIK_FRA_PROPOSAL.md)**: *(Sensorveiledning Kriterium 2 - 20 %)*
   * Begrunnelse for omfangsjustering fra opprinnelig proposal til v1 etter faglærers tilbakemelding.
 * 📄 **[docs/KVALITETSSIKRING_OG_TESTING.md](./docs/KVALITETSSIKRING_OG_TESTING.md)**: *(Sensorveiledning Kriterium 3 - 15 %)*
-  * Dokumentasjon av alle 28 enhetstester i pytest.
-  * Tre konkrete eksempler på feil avdekket i KI-generert kode og hvordan de ble rettet (Code Review).
+  * Dokumentasjon av alle 30 enhetstester i pytest.
+  * Fire konkrete eksempler på feil avdekket i KI-generert kode og hvordan de ble rettet (Code Review).
 * 📄 **[docs/03_ux/UX_DESIGN_OG_WIREFRAMES.md](./docs/03_ux/UX_DESIGN_OG_WIREFRAMES.md)**: *(Sensorveiledning Kriterium 4 - 10 %)*
   * Brukerreise for daglig leder, ASCII-wireframes, fargehierarki og universell utforming (WCAG).
 * 📄 **[docs/04_architecture/ARCHITECTURE.md](./docs/04_architecture/ARCHITECTURE.md)**: *(Sensorveiledning Kriterium 5 - 10 %)*
