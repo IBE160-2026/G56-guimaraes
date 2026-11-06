@@ -119,12 +119,12 @@ pytest -v tests/
 
 For å sikre full sporbarhet fra idé og krav til ferdig kode og kvalitetssikring (kriterium 1–5 i sensorveiledningen), er dokumentasjonen strukturert etter BMAD-metodikken:
 
-* 🏛️ **[course/sensorveiledning.md](./course/sensorveiledning.md)**: *(Offisiell sensorveiledning for emnet IBE160)*
+* 🏛️ **[docs/00_course_and_brief/sensorveiledning.md](./docs/00_course_and_brief/sensorveiledning.md)**: *(Offisiell sensorveiledning for emnet IBE160)*
   * Eksamensveiledningens 7 vurderingskriterier, vekting og A–F kjennetegn.
-* 🏛️ **[course/tilbakemelding-product-brief.md](./course/tilbakemelding-product-brief.md)**: *(Faglærers evaluering av opprinnelig brief)*
+* 🏛️ **[docs/00_course_and_brief/tilbakemelding-product-brief.md](./docs/00_course_and_brief/tilbakemelding-product-brief.md)**: *(Faglærers evaluering av opprinnelig brief)*
   * Tilbakemeldingen som la grunnlaget for scoping og spisset kjerneflyt (SB + HB).
-* 📋 **[planning-artifacts/briefs/brief-prompt/](./planning-artifacts/briefs/brief-prompt/)**: *(BMAD Planleggingsartefakter)*
-  * Inneholder `brief.md`, `tilbakemelding-product-brief.md`, `addendum.md`, `ki-logg.md` og `.memlog.md`.
+* 📋 **[docs/00_course_and_brief/brief-ki-logg.md](./docs/00_course_and_brief/brief-ki-logg.md)**: *(KI-logg fra brief-fasen)*
+  * Dokumenterer systematisk styring, prompting og korrigering av KI under utarbeidelsen av Product Brief.
 * 📄 **[docs/KI_STYRING_OG_PROMPTS.md](./docs/KI_STYRING_OG_PROMPTS.md)**: *(Sensorveiledning Kriterium 1 - 30 %)*
   * Dokumentasjon av hvordan gruppen har styrt, korrigert og forbedret KI gjennom fem iterasjoner.
   * Fullstendig oversikt over system- og brukerprompts, hyperparametre og governance-regler.
@@ -148,12 +148,12 @@ For å sikre full sporbarhet fra idé og krav til ferdig kode og kvalitetssikrin
 
 ```text
 G56-guimaraes/
-├── .agents/skills/                     # Gemini Antigravity Skills (BMAD roller & prosedyrer)
+├── .agents/skills/                     # Gemini Antigravity Skills (BMAD roller & sesjonslogg)
 ├── .github/workflows/ci.yml           # GitHub Actions automatisert testkjøring (CI)
 ├── .githooks/pre-push                  # Lokal git hook for forhåndstesting før push
+├── .logs/turnaround1207/               # Sesjonslogger og åpne punkter (issues.md)
+├── .streamlit/config.toml              # Tema- og serverkonfigurasjon for Streamlit
 ├── _bmad/                              # BMAD rammeverkmoduler (_config, bmm, cis, core, custom)
-├── _bmad-output/                       # BMAD verifikasjonslogg og statusrapporter
-├── ai-log/                             # KI-styringslogger og prompthistorikk (Kriterium 1)
 ├── scripts/                            # Hjelpeskript for oppstart og testkjøring
 ├── app.py                              # Hovedinngangspunkt for Streamlit (rot)
 ├── AGENTS.md                           # Felles agentinstruksjoner (Norsk språk, BMAD-regler)
@@ -165,18 +165,9 @@ G56-guimaraes/
 ├── README.md                           # Denne veiledningen
 ├── product-brief.md                    # Revidert Product Brief (Kjerneversjon: SB + HB)
 ├── prosjektplan.md                     # Fremdriftsplan for semesteret
-├── course/                             # Kursdokumentasjon og sensorveiledning
-│   ├── sensorveiledning.md             # Eksamensveiledning Del 1 (70%)
-│   └── tilbakemelding-product-brief.md # Faglærers evaluering av product brief
-├── planning-artifacts/                 # BMAD planleggingsartefakter
-│   └── briefs/brief-prompt/            # Brief, KI-logg, addendum og memlog
-│       ├── brief.md                    # Product Brief
-│       ├── tilbakemelding-product-brief.md # Tilbakemelding fra faglærer
-│       ├── addendum.md                 # Omfangsjustering etter feedback
-│       ├── ki-logg.md                  # Logg over KI-styring under brief-fasen
-│       └── .memlog.md                  # BMAD minnelogg og regler
 ├── src/                                # Kildekode
 │   ├── app.py                          # Streamlit brukergrensesnitt
+│   ├── app_logging.py                  # Strukturert in-memory/stdout logging
 │   ├── compliance_engine.py            # Balansekontroll, kryssavstemming og NS 4102
 │   ├── data_pipeline.py                # Skuddsikker fillasting (komma, semikolon, desimaler)
 │   ├── llm_integration.py              # OpenAI Pydantic Structured Outputs og mock-modus
@@ -194,9 +185,10 @@ G56-guimaraes/
 │       ├── saldobalanse_med_ubalanse.csv   # Rød test: ubalanse på 10 000 NOK
 │       ├── hovedbok_med_avvik.csv      # Rød test: avstemmingsavvik på 30 000 NOK
 │       └── README.md                   # Dokumentasjon av testdata og fasit
-└── docs/                               # BMAD-dokumentasjon
+└── docs/                               # Samlet BMAD- og prosjektdokumentasjon
     ├── KI_STYRING_OG_PROMPTS.md        # Kriterium 1: Prompts, KI-styring og iterasjoner
     ├── KVALITETSSIKRING_OG_TESTING.md  # Kriterium 3: Teststrategi og feilrettingslogg
+    ├── 00_course_and_brief/            # Sensorveiledning, tilbakemelding på brief og brief-logg
     ├── 01_analysis/                    # Kriterium 2: Domeneanalyse og avvik fra proposal
     ├── 02_product/                     # PRD, Epics og User Stories
     ├── 03_ux/                          # Kriterium 4: Wireframes og UX-design

@@ -90,20 +90,25 @@ G56-guimaraes/
 │   └── sample/                         # Syntetiske testdatasett med kjent fasit
 │       ├── saldobalanse_balansert.csv  # Grønn test: full balanse
 │       ├── hovedbok_balansert.csv      # Grønn test: matcher SB perfekt
+│       ├── saldobalanse_norsk_semikolon.csv # Norsk format med semikolon og desimalkomma
 │       ├── saldobalanse_med_ubalanse.csv # Rød test: ubalanse på 10 000 NOK
 │       ├── hovedbok_med_avvik.csv      # Rød test: avvik på 30 000 NOK mot SB
 │       └── README.md                   # Dokumentasjon av eksempeldata og fasit
-├── docs/                               # BMAD-dokumentasjon
-│   ├── 01_analysis/                    # Forretningsanalyse og domene
+├── docs/                               # Samlet BMAD- og prosjektdokumentasjon
+│   ├── 00_course_and_brief/            # Sensorveiledning, tilbakemelding og brief-logg
+│   ├── 01_analysis/                    # Forretningsanalyse og avvik fra proposal
+│   │   └── AVVIK_FRA_PROPOSAL.md
 │   ├── 02_product/                     # PRD (Product Requirements Document)
 │   │   └── PRD.md
 │   ├── 03_ux/                          # UI-skisser og brukerflyt
+│   │   └── UX_DESIGN_OG_WIREFRAMES.md
 │   ├── 04_architecture/                # Teknisk arkitektur og systemdesign
 │   │   └── ARCHITECTURE.md
-│   ├── BMAD_ROLES.md                   # Rolleoversikt og metodedokument
-│   └── BMAD_AGENT_ENGINEERING.md       # Agent engineering og BOND-regler
+│   ├── KI_STYRING_OG_PROMPTS.md        # Prompts, iterasjoner og KI-styring
+│   └── KVALITETSSIKRING_OG_TESTING.md  # Teststrategi og feilrettingslogg
 ├── src/                                # Kildekode
 │   ├── app.py                          # Hovedapplikasjon (Streamlit)
+│   ├── app_logging.py                  # Strukturert in-memory/stdout logging
 │   ├── compliance_engine.py            # Validering (Debet=Kredit), kryssavstemming og NS 4102
 │   ├── data_pipeline.py                # In-memory fillasting (CSV og Excel)
 │   ├── llm_integration.py              # OpenAI Structured Outputs og frakoblet testmodus
@@ -115,6 +120,7 @@ G56-guimaraes/
 │   └── test_reporting.py               # pytest-tester for AI Firewall, Mock, PDF og HTML
 ├── .env.example                        # Mal for miljøvariabler (OPENAI_API_KEY)
 ├── .gitignore                          # Ignorerer venv, cache, .env og midlertidige filer
+├── app.py                              # Hovedinngangspunkt for Streamlit (rot)
 ├── product-brief.md                    # Det reviderte Product Briefet
 ├── prosjektplan.md                     # Fremdriftsplan for semesteret
 ├── README.md                           # Hurtigstart og instruksjoner for sensor

@@ -12,7 +12,7 @@
 | **Dato** | 2026-11-02 |
 | **Eier** | Victor Guimaraes / Gruppe G56 (IBE160 Programmering med KI, Høgskolen i Molde) |
 | **Status** | Godkjent (v1.1) |
-| **Kildegrunnlag** | `product-brief.md` (revidert v1), `docs/01_analysis/AVVIK_FRA_PROPOSAL.md`, `course/sensorveiledning.md` |
+| **Kildegrunnlag** | `product-brief.md` (revidert v1), `docs/01_analysis/AVVIK_FRA_PROPOSAL.md`, `docs/00_course_and_brief/sensorveiledning.md` |
 | **Utviklingsverktøy** | Google Gemini Antigravity (BMAD / AiDD) |
 | **Runtime-LLM** | OpenAI `gpt-4o-mini` (kun tekst via Pydantic Structured Outputs) + lokal Mock-modus |
 
@@ -270,7 +270,7 @@ Følgende punkter ble identifisert under revisjonen til v1.1 og er nå **ferdig 
 3. **Clone-URL i README (K6) — VERIFISERT:**
    * `README.md` peker direkte til kurs-repositoriet `https://github.com/IBE160-2026/G56-guimaraes.git`.
 4. **Skille mellom faglærers rammeverksfiler og studentens utviklingsverktøy (K1 / K7) — FASTSATT:**
-   * Eventuelle utdelte kursmaler (som `CLAUDE.md` eller `.claude/skills/sesjonslogg`) er faglærers utdelte rammeverk og skal aldri omtales som om applikasjonen ble utviklet i Claude Code. Utviklingsverktøyet i prosjektet G56 er utelukkende **Google Gemini Antigravity**.
+   * Sesjonslogg-ferdigheten er konsolidert inn i `.agents/skills/sesjonslogg/SKILL.md` og forankret i `AGENTS.md` og `GEMINI.md`. Utviklingsverktøyet i prosjektet G56 er utelukkende **Google Gemini Antigravity**.
 
 ---
 
