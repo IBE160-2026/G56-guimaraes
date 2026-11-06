@@ -266,6 +266,7 @@ def generate_management_html(
     }}
     .kpi-card {{
       border: 1px solid var(--border);
+      border-top: 3px solid var(--navy);
       border-radius: 6px;
       padding: 12px 14px;
       background-color: #f8fafc;
@@ -282,6 +283,8 @@ def generate_management_html(
       font-weight: 700;
       color: var(--navy);
       margin-top: 4px;
+      font-variant-numeric: tabular-nums;
+      font-feature-settings: "tnum" 1;
     }}
     .section-text {{
       color: var(--slate-700);
@@ -316,9 +319,14 @@ def generate_management_html(
       color: var(--slate-900);
       font-weight: 700;
     }}
+    .data-table tbody tr:nth-child(even) {{
+      background-color: #f8fafc;
+    }}
     .data-table .num {{
       text-align: right;
       white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+      font-feature-settings: "tnum" 1;
     }}
     .discrepancy-cell {{
       color: var(--red-text);
@@ -373,7 +381,15 @@ def generate_management_html(
         grid-template-columns: repeat(2, 1fr);
       }}
     }}
+    @page {{
+      size: A4 portrait;
+      margin: 15mm 12mm;
+    }}
     @media print {{
+      * {{
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }}
       body {{
         background: #ffffff;
         padding: 0;
@@ -382,6 +398,17 @@ def generate_management_html(
         border: none;
         padding: 0;
         max-width: 100%;
+      }}
+      section, .kpi-grid, .status-banner, tr {{
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }}
+      thead {{
+        display: table-header-group;
+      }}
+      h2 {{
+        break-after: avoid;
+        page-break-after: avoid;
       }}
     }}
   </style>

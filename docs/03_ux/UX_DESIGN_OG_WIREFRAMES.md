@@ -34,22 +34,33 @@ journey
 
 ## 2. Skjermbilde-Wireframes (ASCII / Markdown)
 
-### Skjerm 1: Initialtilstand og Opplasting (Tomtilstand)
+### Skjerm 1: Initialtilstand og 2x2 Opplastingsrutenett (Alltid synlig)
 ```text
-+------------------------------------------------------------------------------------+
-|  📊 Ledelsesrapport og Regnskapskontroll med KI                                    |
-|  Automatisert avstemming mellom SB og HB, mapping til NS 4102 og KI-styrepakke     |
-+------------------------------------------------------------------------------------+
-|  [Sidebar]                 |  [Hovedfelt]                                          |
-|  ⚙️ Konfigurasjon          |                                                       |
-|  ( ) Last opp egne filer   |  +------------------------+  +------------------------+
-|  (•) Bruk eksempel (Bal.)  |  | 1. Saldobalanse (SB)   |  | 2. Hovedbok (HB)       |
-|  ( ) Bruk eksempel (Avvik) |  | [ Dra og slipp her ]   |  | [ Dra og slipp her ]   |
-|                            |  +------------------------+  +------------------------+
-|  🤖 KI-innstillinger       |                                                       |
-|  [x] Testmodus (Mock KI)   |  ℹ️ Vennligst last opp både Saldobalanse og Hovedbok,  |
-|                            |     eller velg eksempeldata i menyen til venstre.     |
-+------------------------------------------------------------------------------------+
++------------------------------------------------------------------------------------------------------+
+|  📊 Ledelsesrapport og Regnskapskontroll med KI                                                      |
+|  Automatisert avstemming mellom SB og HB, mapping til NS 4102 og KI-styrepakke                       |
++------------------------------------------------------------------------------------------------------+
+|  [Sidebar]                 |  [Hovedfelt]                                                            |
+|  ⚙️ Konfigurasjon          |  📂 Last opp Regnskapsfiler: Saldobalanse (SB) og Hovedbok (HB)         |
+|  (•) Bruk eksempel (Bal.)  |  Dra og slipp dine egne filer her (.csv eller .xlsx), eller velg        |
+|  ( ) Bruk eksempel (Avvik) |  ferdige eksempeldatasett i menyen til venstre.                         |
+|  ( ) Last opp egne filer   |                                                                         |
+|                            |  [ ⚡ Last inn norsk semikolon-format (100 000,00) ]  [ 🔄 Nullstill ]  |
+|  🤖 KI-innstillinger       |                                                                         |
+|  [x] Testmodus (Mock KI)   |  +----------------------------------+  +--------------------------------+
+|                            |  | 📊 1. Saldobalanse (SB)          |  | 📘 2. Hovedbok (HB)            |
+|                            |  | Dra og slipp Saldobalanse her... |  | Dra og slipp Hovedbok her...   |
+|                            |  | [ Browse files (.csv / .xlsx) ]  |  | [ Browse files (.csv / .xlsx) ]|
+|                            |  | Aktiv kilde: [Filnavn] (7 kont.) |  | Aktiv kilde: [Filnavn] (6 tr.) |
+|                            |  +----------------------------------+  +--------------------------------+
+|                            |  +----------------------------------+  +--------------------------------+
+|                            |  | 🤝 3. CRM & Kundereskontro       |  | 📦 4. Lagerdata & Vareflyt     |
+|                            |  | 🚧 Under utvikling – Ikke tilgj. |  | 🚧 Under utvikling – Ikke tilg.|
+|                            |  | Kryssanalyse mot konto 1500/3000 |  | Avstemming mot konto 1400/4000 |
+|                            |  | [🔒 Ikke tilgjengelig (v2.0)]    |  | [🔒 Ikke tilgjengelig (v2.0)]  |
+|                            |  | Status: Under utvikling • v1     |  | Status: Under utvikling • Låst |
+|                            |  +----------------------------------+  +--------------------------------+
++------------------------------------------------------------------------------------------------------+
 ```
 
 ### Skjerm 2: Aktiv Analyse & Avstemmingsfeil (Negativ Test)
