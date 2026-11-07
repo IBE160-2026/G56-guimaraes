@@ -31,6 +31,14 @@ test-results/
 !.env.*.example
 *.log
 
+# Local SQLite database files (never commit accounting data)
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
+
 # BMAD: keep shared framework, skills, plans and documentation
 _bmad/config.user.toml
 _bmad/custom/*.user.toml

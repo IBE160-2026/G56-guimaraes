@@ -33,8 +33,9 @@ Ferdighetene er implementert i `.agents/skills/` (for Gemini Antigravity):
 4. **Norske standarder:**
    * Støtte semikolon (`;`) og komma (`,`) som skilletegn, samt komma som desimaltegn (`100 000,00`).
    * Mapping mot Norsk Standard Kontoplan (NS 4102).
-5. **Datasikkerhet og minne:**
-   * Regnskapsfiler skal aldri lagres persistent på disk eller lekkes utenfor minnet (`io.BytesIO`).
+5. **Datasikkerhet, minne og lokal database:**
+   * Rå opplastede regnskapsfiler (`.csv`/`.xlsx`) og genererte rapportfiler (`.pdf`/`.html`) skal alltid behandles i minnet (`io.BytesIO`) uten mellomlagring av løse filer.
+   * Verifiserte regnskapsdata, relasjoner (kontoplan, saldobalanse, hovedbok) og historiske analyser lagres strukturert i en lokal SQLite-database (`data/g56_accounting.db`) som er strengt ekskludert i `.gitignore`.
 
 ---
 

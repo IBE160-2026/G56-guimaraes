@@ -1,126 +1,81 @@
-# UX-Design, Wireframes og Brukerreise (Streamlit Dashboard)
+# UX-Design, Wireframes og Brukerreise (Flersides Streamlit v2.0)
 
 * **Dokument-ID:** UX-SPEC-01
+* **Versjon:** v2.0
 * **Prosjekt:** G56 – Ledelsesrapport og forenklet kontroll av regnskap med KI
 * **Emne:** IBE160 Programmering med KI (Kriterium 4: Design og brukeropplevelse - 10 %)
-* **Formål:** Dokumentere designvalg, informasjonsarkitektur, wireframes og universell utforming for applikasjonen.
+* **Formål:** Dokumentere informasjonsarkitektur, flersides navigasjon (`st.navigation`), wireframes og universell utforming (WCAG).
 
 ---
 
-## 1. Målgruppe og Brukerreise
+## 1. Informasjonsarkitektur (Flersides Navigasjon)
 
-### Primærbruker: Daglig leder i SMB uten økonomisjef
-* **Situasjon:** Skal i styremøte om to dager. Har mottatt en saldobalanse og hovedbok fra ekstern regnskapsfører, men forstår ikke hvorfor likviditeten er stram når resultatet er positivt, og er usikker på om regnskapet er korrekt avstemt.
-* **Mål:** Laste opp filene, få bekreftet at tallene er i balanse på under 5 sekunder, og motta et velskrevet ledelsesnotat med en nedlastbar PDF-styrepakke.
+For å romme utvidet CFO-analyse (Lønnsomhet, Likviditet, Soliditet, TKR og EKR), detaljert Hovedbok-utforsker, deterministiske lønnsomhetsråd og databasehistorikk *uten visuell overbelastning*, er applikasjonen delt inn i **fire dedikerte sider** via `st.navigation`:
 
-```mermaid
-journey
-    title Brukerreise for Daglig Leder
-    section 1. Start & Inntak
-      Åpner applikasjonen: 5: Bruker
-      Velger hurtigeksempel eller drar inn CSV/Excel: 5: Bruker
-    section 2. Internkontroll
-      Ser umiddelbar balansekontroll (Debet = Kredit): 5: Bruker
-      Ser kryssavstemmingsstatus (IB + HB = UB): 5: Bruker
-    section 3. Innsikt & Beslutning
-      Leser nøkkeltallsmetrikker (EBIT og margin): 5: Bruker
-      Trykker 'Generer rapport': 5: Bruker
-      Leser CFO-hovedkonklusjon og handlingsplan: 5: Bruker
-    section 4. Eksport
-      Laster ned styrepakke som PDF: 5: Bruker
-```
+1. **📂 1. Opplasting & Kontroll (`src/views/upload_and_control.py`):** 2x2 opplastingsrutenett, hurtigknapp for norsk semikolon-format, balansekontroll ($\sum D = \sum K$), kryssavstemming ($IB + HB = UB$) og status for automatisk SQLite-synkronisering.
+2. **📊 2. Finansiell Analyse & HB (`src/views/financial_analysis.py`):** To strukturerte arbeidsfaner – (A) CFO KPI-dashboard med 12 nøkkeltall mot SMB-normer og kostnadsdrivere, og (B) Hovedbok-utforsker med filtre, kontokort med løpende saldo og bilagsinspektør.
+3. **💡 3. KI-Rådgiver & Eksport (`src/views/ai_advisor_and_export.py`):** Pre-kalkulerte deterministiske lønnsomhetsråd i NOK fra Python, generering av strukturert KI-rapport over *The AI Firewall*, og ett-klikks nedlasting av PDF- og HTML-styrepakke.
+4. **🗄️ 4. Historikk & Trendanalyse (`src/views/history_and_trends.py`):** Sammenligning av lagrede kjøringer fra `data/g56_accounting.db` over tid, trendgrafer for inntekt/EBIT/soliditet/rentabilitet, og gjenåpning/re-eksport av tidligere KI-rapporter.
 
 ---
 
-## 2. Skjermbilde-Wireframes (ASCII / Markdown)
+## 2. Skjermbilde-Wireframes (ASCII)
 
-### Skjerm 1: Initialtilstand og 2x2 Opplastingsrutenett (Alltid synlig)
+### Side 1: Opplasting & Automatisk Internkontroll
 ```text
 +------------------------------------------------------------------------------------------------------+
-|  📊 Ledelsesrapport og Regnskapskontroll med KI                                                      |
-|  Automatisert avstemming mellom SB og HB, mapping til NS 4102 og KI-styrepakke                       |
-+------------------------------------------------------------------------------------------------------+
-|  [Sidebar]                 |  [Hovedfelt]                                                            |
-|  ⚙️ Konfigurasjon          |  📂 Last opp Regnskapsfiler: Saldobalanse (SB) og Hovedbok (HB)         |
-|  (•) Bruk eksempel (Bal.)  |  Dra og slipp dine egne filer her (.csv eller .xlsx), eller velg        |
-|  ( ) Bruk eksempel (Avvik) |  ferdige eksempeldatasett i menyen til venstre.                         |
-|  ( ) Last opp egne filer   |                                                                         |
-|                            |  [ ⚡ Last inn norsk semikolon-format (100 000,00) ]  [ 🔄 Nullstill ]  |
-|  🤖 KI-innstillinger       |                                                                         |
-|  [x] Testmodus (Mock KI)   |  +----------------------------------+  +--------------------------------+
-|                            |  | 📊 1. Saldobalanse (SB)          |  | 📘 2. Hovedbok (HB)            |
-|                            |  | Dra og slipp Saldobalanse her... |  | Dra og slipp Hovedbok her...   |
-|                            |  | [ Browse files (.csv / .xlsx) ]  |  | [ Browse files (.csv / .xlsx) ]|
-|                            |  | Aktiv kilde: [Filnavn] (7 kont.) |  | Aktiv kilde: [Filnavn] (6 tr.) |
-|                            |  +----------------------------------+  +--------------------------------+
-|                            |  +----------------------------------+  +--------------------------------+
-|                            |  | 🤝 3. CRM & Kundereskontro       |  | 📦 4. Lagerdata & Vareflyt     |
-|                            |  | 🚧 Under utvikling – Ikke tilgj. |  | 🚧 Under utvikling – Ikke tilg.|
-|                            |  | Kryssanalyse mot konto 1500/3000 |  | Avstemming mot konto 1400/4000 |
-|                            |  | [🔒 Ikke tilgjengelig (v2.0)]    |  | [🔒 Ikke tilgjengelig (v2.0)]  |
-|                            |  | Status: Under utvikling • v1     |  | Status: Under utvikling • Låst |
-|                            |  +----------------------------------+  +--------------------------------+
+|  [Sidemeny: st.navigation] |  📂 1. Opplasting & Automatisk Internkontroll                           |
+|  > 📂 1. Opplasting & Kont.|  [ ⚡ Norsk semikolon-format (100 000,00) ]   [ 🔄 Nullstill eksempel ] |
+|    📊 2. Finansiell Analyse|                                                                         |
+|    💡 3. KI-Rådgiver       |  +----------------------------------+  +--------------------------------+
+|    🗄️ 4. Historikk (SQLite)|  | 📊 1. Saldobalanse (SB)          |  | 📘 2. Hovedbok (HB)            |
+|  ------------------------- |  | [ Browse files (.csv / .xlsx) ]  |  | [ Browse files (.csv / .xlsx) ]|
+|  ⚙️ Konfigurasjon          |  +----------------------------------+  +--------------------------------+
+|  Selskapsnavn: [Bedrift AS]|                                                                         |
+|  (•) Balansert (Grønn sti) |  🔍 Steg 1: Automatisk Internkontroll & Kryssavstemming                 |
+|  ( ) Med avvik (Rød sti)   |  [ ✅ SB: Debet = Kredit ]            [ ✅ HB: Debet = Kredit ]         |
+|  ( ) Egne filer            |  ⚖️ Kryssavstemming (IB + HB = UB): ✅ Full konsistens (0 avvik)       |
+|  [x] Testmodus (Mock KI)   |  🗄️ SQLite Auto-Sync: Synkronisert som Kjøring #1 (Periode: 2026-01)   |
 +------------------------------------------------------------------------------------------------------+
 ```
 
-### Skjerm 2: Aktiv Analyse & Avstemmingsfeil (Negativ Test)
-Dersom det er avvik mellom Hovedbok og Saldobalanse, fanges dette i en rød advarselboks med detaljert tabell:
+### Side 2: Finansiell Analyse & Hovedbok-Utforsker
 ```text
-+------------------------------------------------------------------------------------+
-|  🔍 Steg 1: Automatisk Internkontroll & Avstemming                                 |
-|                                                                                    |
-|  Balansekontroll: SB: ✅ Godkjent          Balansekontroll: HB: ✅ Godkjent        |
-|                                                                                    |
-|  ❌ Avstemmingsavvik funnet på 2 konto(er):                                        |
-|  +-------+--------------------+-----------+------------+--------------+----------+ |
-|  | Konto | Kontonavn          | IB        | Netto_HB   | Beregnet_UB  | UB       | |
-|  +-------+--------------------+-----------+------------+--------------+----------+ |
-|  | 1500  | Kundefordringer    | 50 000,00 | 10 000,00  | 60 000,00    | 90000,00 | |
-|  | 1920  | Bankinnskudd       | 100 000,00| 110 000,00 | 210 000,00   | 180000,00| |
-|  +-------+--------------------+-----------+------------+--------------+----------+ |
-+------------------------------------------------------------------------------------+
++------------------------------------------------------------------------------------------------------+
+|  📊 2. Finansiell Analyse & Hovedbok-Utforsker                                                       |
+|  [ 📈 CFO Nøkkeltalls-Dashboard (KPI-er) ]   [ 📘 Hovedbok-Utforsker (Drill-down & Bilagsinspektør) ]|
+|  --------------------------------------------------------------------------------------------------- |
+|  1. Lønnsomhet:  [ Driftsinnt.: 200k ] [ Bruttomargin: 70,0 % ] [ EBIT: 110k ] [ Driftsmargin: 55 % ]|
+|  2. Likviditet:  [ Bank: 180k ]        [ Arbeidskap.: 220k ]    [ LG1: 5,40 ]  [ LG2: 5,40 ]         |
+|  3. Soliditet:   [ EK-andel: 81,5 % ]  [ Gjeldsgrad: 0,23 ]     [ TKR: 52,4 %] [ EKR: 66,7 % ]       |
+|                                                                                                      |
+|  --- (I fanen Hovedbok-Utforsker): ---                                                               |
+|  Filter: [ NS 4102: Alle v ]   [ Konto: 1500 Kundefordringer v ]   [ Søk: Faktura 101            ]   |
+|  Kontokort 1500: IB 50 000 kr | Netto HB +40 000 kr | Beregnet UB 90 000 kr | Avvik 0,00 kr (Avstemt)|
+|  Tabell med Løpende Saldo (SQLite Window Function) + 🧾 Bilagsinspektør per Bilagsnr                 |
++------------------------------------------------------------------------------------------------------+
 ```
 
-### Skjerm 3: Fullverdig Dashboard (Happy Path)
+### Side 3 & Side 4: Lønnsomhetsråd, KI-CFO & SQLite-Historikk
 ```text
-+------------------------------------------------------------------------------------+
-|  📈 Steg 2: Nøkkeltall og Strategisk Ledelsessammendrag                             |
-|                                                                                    |
-|  [ Driftsinntekter ]  [ Driftskostnader ]  [ Driftsresultat (EBIT) ]  [ Margin ]   |
-|     200 000 NOK           90 000 NOK              110 000 NOK           55.0 %     |
-|                                                                                    |
-|  [ 🚀 Generer Strategisk Ledelsesrapport (KI) ]                                    |
-|                                                                                    |
-|  🏆 Hovedkonklusjon til Styret:                                                    |
-|  +-------------------------------------------------------------------------------+ |
-|  | Selskapet leverer en solid driftsperiode med sterk lønnsomhet (EBIT 55 %).     | |
-|  | Regnskapet er fullstendig avstemt mot hovedboken uten avvik.                   | |
-|  +-------------------------------------------------------------------------------+ |
-|                                                                                    |
-|  [ 📊 Lønnsomhet & Marginer ]  [ 💧 Likviditet ]  [ 🛡️ Revisors Avstemming ]       |
-|  Dyp analyse av driftsinntekter, varekostnad og skalerbarhet...                    |
-|                                                                                    |
-|  🚩 Identifiserte Faresignaler         🎯 Strategisk Handlingsplan                 |
-|  • Kundefordringer binder kapital      [Høy] Stram inn kredittpolicy               |
-|  • Lavrentekonto                       [Med] Forhandle leverandørkreditt           |
-|                                        [Lav] Flytt likviditet til rentekonto       |
-|                                                                                    |
-|  [ 📥 Last ned Ledelsesrapport (PDF) ]   [ 📥 Last ned Styrepakke (HTML) ]         |
-+------------------------------------------------------------------------------------+
++------------------------------------------------------------------------------------------------------+
+|  💡 3. Lønnsomhetsråd, KI-Rådgiver & Eksport                                                         |
+|  📐 Steg A: Deterministisk Lønnsomhetsmotor (Beregnet i Python)                                      |
+|  +------------------------------------------------+ +----------------------------------------------+ |
+|  | [Høy] Reduser kapitalbinding i kundefordringer | | [Medium] Optimaliser varekostnad (Konto 4000)| |
+|  | 💰 Beregnet potensial: Frigjør 50 000 NOK      | | 💰 Beregnet potensial: Øker EBIT med 3 000 kr| |
+|  +------------------------------------------------+ +----------------------------------------------+ |
+|  🤖 Steg B: [ 🚀 Generer Strategisk Ledelsesrapport (KI) ] -> 4 analysefaner + Tiltaksliste          |
+|  📄 Steg C: [ 📥 Last ned Ledelsesrapport (PDF) ]   [ 📥 Last ned Styrepakke (HTML) ]                |
++------------------------------------------------------------------------------------------------------+
 ```
 
 ---
 
-## 3. Designprinsipper og Universell Utforming (WCAG)
+## 3. Designprinsipper og Universell Utforming (WCAG 2.1 AA)
 
-* **Visuelt hierarki:** Fargene følger et semantisk mønster:
-  * 🟢 **Grønn (`#16a34a`):** Matematisk godkjent balanse og fullført avstemming.
-  * 🔴 **Rød (`#b91c1c`):** Kritiske balansefeil eller differanser i kryssavstemmingen.
-  * 🔵 **Mørk blå (`#1e3a8a`):** Forretningsmessige overskrifter og ledelsesnotat (CFO-stil).
-* **Tilgjengelighet og lesbarhet:**
-  * Høy kontrast mellom tekst og bakgrunn i henhold til WCAG 2.1 AA-krav.
-  * Tallformatering med tusenskilletegn (`200 000 NOK`) for umiddelbar forståelse.
-  * Tydelige tomtilstander (`st.info("Vennligst last opp...")`) som veileder brukeren steg for steg uten forvirring.
-* **Tastaturnavigasjon og responsivitet:**
-  * Streamlits standardkomponenter støtter full tab-navigasjon via tastatur.
-  * Dashboardet tilpasser seg automatisk både store skjermer og bærbare PC-er via `layout="wide"`.
+* **Semantisk trafikklys-hierarki (med tekstetiketter):**
+  * 🟢 **Grønn (`#16a34a`):** Matematisk godkjent balanse, avstemt konto og nøkkeltall over norm (f.eks. `Sterk (≥ 2,0)` på LG1 og `Solid (≥ 30 %)` på Egenkapitalandel).
+  * 🔴 **Rød (`#b91c1c`):** Balansefeil, avstemmingsavvik mellom HB og SB, og høyprioriterte risikovarsler.
+  * 🔵 **Mørk marineblå (`#1e3a8a`):** Nøytral strukturfarge for CFO-typografi i PDF og HTML (kontrastforhold $> 8:1$ mot hvit bakgrunn).
+* **Progressiv detaljering:** Brukeren tvinges ikke til å rulle gjennom lange tabeller; opplasting/kontroll, dyp tallanalyse, strategisk rådgivning og historikk har hver sin dedikerte arbeidsflate med bevart sesjonstilstand.

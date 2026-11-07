@@ -75,14 +75,27 @@ def normalize_column_names(df: pd.DataFrame) -> pd.DataFrame:
     - 'Utgående balanse', 'Closing Balance', 'UB Beløp' -> 'UB'
     """
     column_mapping = {}
-    for col in df.columns:
-        clean_col = str(col).strip().lower().replace('_', ' ').replace('-', ' ')
-        # Fjern ekstra mellomrom
-        clean_col = " ".join(clean_col.split())
+    cleaned_lookup = {
+        col: " ".join(str(col).strip().lower().replace('_', ' ').replace('-', ' ').split())
+        for col in df.columns
+    }
+    has_explicit_account_name = any(
+        c in ['kontonavn', 'konto navn', 'kontobeskrivelse', 'accountname', 'account name', 'kontotekst']
+        for c in cleaned_lookup.values()
+    )
+
+    for col, clean_col in cleaned_lookup.items():
         if clean_col in ['kontonr', 'konto nr', 'kontonummer', 'account', 'accountid', 'account id', 'konto nr.', 'konto id', 'kontoid', 'konto']:
             column_mapping[col] = 'Konto'
-        elif clean_col in ['kontonavn', 'konto navn', 'kontobeskrivelse', 'accountname', 'account name', 'beskrivelse', 'tekst', 'kontotekst']:
+        elif clean_col in ['kontonavn', 'konto navn', 'kontobeskrivelse', 'accountname', 'account name', 'kontotekst']:
             column_mapping[col] = 'Kontonavn'
+        elif clean_col in ['beskrivelse', 'tekst', 'bilagstekst', 'forklaring', 'description']:
+            # I Hovedbok finnes både Kontonavn og Beskrivelse; unngå duplikatkolonne 'Kontonavn'
+            column_mapping[col] = 'Beskrivelse' if has_explicit_account_name else 'Kontonavn'
+        elif clean_col in ['bilagsnr', 'bilagsnr.', 'bilagsnummer', 'bilag', 'voucher', 'voucher no', 'voucherno']:
+            column_mapping[col] = 'Bilagsnr'
+        elif clean_col in ['dato', 'bilagsdato', 'postert dato', 'transaksjonsdato', 'date']:
+            column_mapping[col] = 'Dato'
         elif clean_col in ['debit', 'debetbeløp', 'inn', 'debet (nok)', 'beløp debet']:
             column_mapping[col] = 'Debet'
         elif clean_col in ['credit', 'kreditbeløp', 'ut', 'kredit (nok)', 'beløp kredit']:

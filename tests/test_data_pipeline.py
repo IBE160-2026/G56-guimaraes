@@ -146,3 +146,17 @@ class TestDataPipelineEdgeCases:
         assert cleaned.iloc[1] == 25000.00
         assert cleaned.iloc[2] == 0.50
         assert cleaned.iloc[3] == -150.00
+
+    def test_ledger_upload_preserves_both_kontonavn_and_beskrivelse(self):
+        """
+        Tester at opplasting av Hovedbok (som har både 'Kontonavn' og 'Beskrivelse')
+        ikke skaper duplikatkolonne for 'Kontonavn', men beholder 'Beskrivelse', 'Bilagsnr' og 'Dato'.
+        """
+        sample_hb_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../data/sample/hovedbok_balansert.csv'))
+        with open(sample_hb_path, 'rb') as f:
+            hb_df = process_csv_in_memory(io.BytesIO(f.read()), 'hovedbok_balansert.csv')
+
+        assert list(hb_df.columns).count('Kontonavn') == 1
+        assert 'Beskrivelse' in hb_df.columns
+        assert 'Bilagsnr' in hb_df.columns
+        assert 'Dato' in hb_df.columns

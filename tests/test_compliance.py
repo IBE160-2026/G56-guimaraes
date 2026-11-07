@@ -139,3 +139,46 @@ class TestComplianceEngine:
         assert m["ebit"] == 110000.0
         assert m["driftsmargin"] == 55.0
         assert m["arbeidskapital"] == 110000.0  # (100k bank + 40k fordring) - 30k gjeld = 110k
+
+    def test_cfo_metrics_and_sign_normalization_on_sample_data(self):
+        """
+        Tester at kreditsaldoer med negativt fortegn (slik norske ERP-systemer eksporterer klasse 2)
+        håndteres korrekt med abs(), og verifiserer Likviditetsgrad 1/2, Soliditet (inkl. mellombalanse-EK),
+        Gjeldsgrad, Totalkapitalrentabilitet (TKR) og Egenkapitalrentabilitet (EKR).
+        """
+        from compliance_engine import calculate_detailed_financial_metrics
+        sample_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../data/sample'))
+        sb = pd.read_csv(os.path.join(sample_dir, 'saldobalanse_balansert.csv'))
+
+        m = calculate_detailed_financial_metrics(sb)
+        # Likviditet: Omløpsmidler (180k + 90k = 270k), Kortsiktig gjeld (|-50k| = 50k)
+        assert m["arbeidskapital"] == 220000.0
+        assert m["likviditetsgrad_1"] == 5.4
+        assert m["likviditetsgrad_2"] == 5.4
+
+        # Soliditet ved mellombalanse: Bokført EK (110k) + Udisponert resultat (110k) = 220k av 270k TK
+        assert m["bokfort_egenkapital_ub"] == 110000.0
+        assert m["reell_egenkapital_ub"] == 220000.0
+        assert m["egenkapitalandel"] == 81.48
+        assert m["gjeldsgrad"] == 0.23
+
+        # Rentabilitet (snitt TK = (150k + 270k)/2 = 210k; snitt EK = (110k + 220k)/2 = 165k)
+        assert m["totalkapitalrentabilitet"] == 52.38
+        assert m["egenkapitalrentabilitet"] == 66.67
+
+    def test_zero_division_safety_in_cfo_metrics(self):
+        """Tester at alle brøkbaserte CFO-nøkkeltall returnerer 0.0 uten ZeroDivisionError ved tomme saldoer."""
+        from compliance_engine import calculate_detailed_financial_metrics
+        zero_df = pd.DataFrame({
+            'Konto': ['1920', '2400', '3000'],
+            'IB': [0.0, 0.0, 0.0],
+            'Debet': [0.0, 0.0, 0.0],
+            'Kredit': [0.0, 0.0, 0.0],
+            'UB': [0.0, 0.0, 0.0],
+        })
+        m = calculate_detailed_financial_metrics(zero_df)
+        assert m["likviditetsgrad_1"] == 0.0
+        assert m["likviditetsgrad_2"] == 0.0
+        assert m["egenkapitalandel"] == 0.0
+        assert m["totalkapitalrentabilitet"] == 0.0
+        assert m["egenkapitalrentabilitet"] == 0.0

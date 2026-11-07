@@ -244,4 +244,46 @@ class TestReportingAndExport:
         with pytest.raises(ValueError, match="Kvalitetssikringsfeil"):
             post_validate_ai_response(contradicting_warning, ctx_discrepancy)
 
+    def test_pdf_and_html_include_extended_cfo_metrics_and_recommendations(self):
+        """
+        Tester at både PDF- og HTML-styrepakken inkluderer de nye CFO-nøkkeltallene
+        (Soliditet, LG2, TKR, EKR) og de deterministiske lønnsomhetsrådene med XSS-sikring.
+        """
+        from ledger_analytics import summarize_cost_drivers, generate_profitability_recommendations
+
+        sample_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../data/sample'))
+        sb = pd.read_csv(os.path.join(sample_dir, 'saldobalanse_balansert.csv'))
+        hb = pd.read_csv(os.path.join(sample_dir, 'hovedbok_balansert.csv'))
+        sb['NS4102_Kategori'] = sb['Konto'].apply(map_to_ns4102)
+
+        recon_res = reconcile_hb_with_sb(sb, hb)
+        metrics = calculate_detailed_financial_metrics(sb)
+        drivers = summarize_cost_drivers(sb, hb)
+        recs = generate_profitability_recommendations(metrics, drivers)
+        report = generate_management_report(sb, recon_result=recon_res, mock_mode=True, hb_df=hb)
+
+        pdf_buf = generate_management_pdf(
+            company_name="CFO Test AS",
+            ai_report=report,
+            ns4102_summary=metrics,
+            recon_result=recon_res,
+            recommendations=recs,
+        )
+        assert pdf_buf.getvalue().startswith(b"%PDF-")
+        assert len(pdf_buf.getvalue()) > 1500
+
+        html_buf = generate_management_html(
+            company_name="CFO Test AS",
+            ai_report=report,
+            metrics=metrics,
+            recon_result=recon_res,
+            recommendations=recs,
+        )
+        html_str = html_buf.getvalue().decode("utf-8")
+        assert "81,5 %" in html_str  # Egenkapitalandel (81.48 avrundet til 1 desimal)
+        assert "52,4 %" in html_str  # TKR (52.38 avrundet til 1 desimal)
+        assert "66,7 %" in html_str  # EKR (66.67 avrundet til 1 desimal)
+        assert "Deterministisk Lønnsomhetspotensial" in html_str
+        assert "50 000 NOK" in html_str
+
 

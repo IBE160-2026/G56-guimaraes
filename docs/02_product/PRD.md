@@ -8,10 +8,10 @@
 | Felt | Verdi |
 |:---|:---|
 | **Dokument-ID** | PRD-01 |
-| **Versjon** | v1.1 |
-| **Dato** | 2026-11-02 |
+| **Versjon** | v2.0 |
+| **Dato** | 2026-11-07 |
 | **Eier** | Victor Guimaraes / Gruppe G56 (IBE160 Programmering med KI, Høgskolen i Molde) |
-| **Status** | Godkjent (v1.1) |
+| **Status** | Godkjent (v2.0 – Strategisk Finansanalyse, HB-Drilldown & SQLite-Historikk) |
 | **Kildegrunnlag** | `product-brief.md` (revidert v1), `docs/01_analysis/AVVIK_FRA_PROPOSAL.md`, `docs/00_course_and_brief/sensorveiledning.md` |
 | **Utviklingsverktøy** | Google Gemini Antigravity (BMAD / AiDD) |
 | **Runtime-LLM** | OpenAI `gpt-4o-mini` (kun tekst via Pydantic Structured Outputs) + lokal Mock-modus |
@@ -40,11 +40,12 @@ All matematikk, balansekontroll ($\sum \text{Debet} = \sum \text{Kredit}$), krys
 1. **Balansekontroll:** En saldobalanse eller hovedbok der $\sum \text{Debet} \neq \sum \text{Kredit}$ (utover flyttallstoleranse $\le 0,01$ NOK) blir umiddelbart flagget med synlig feilmelding og nøyaktig differanse, og videre rapportgenerering blokkeres.
 2. **Kryssavstemming (HB mot SB):** For hver konto kontrollerer systemet at $\text{IB} + \sum(\text{Debet}_{\text{HB}} - \text{Kredit}_{\text{HB}}) = \text{UB}$. Ved avvik flagges den spesifikke kontoen med kontonummer, kontonavn og nøyaktig feilbeløp.
 3. **Mapping til NS 4102:** Standard 4-sifrede norske kontonumre mappes deterministisk til sine respektive kontoklasser etter Norsk Standard Kontoplan (NS 4102).
-4. **Deterministiske nøkkeltall:** Systemet beregner driftsinntekter, varekostnad, bruttofortjeneste, bruttomargin, lønnskostnad, andre driftskostnader, samlede driftskostnader, driftsresultat (EBIT), driftsmargin, ordinært resultat, bankinnskudd, kundefordringer, leverandørgjeld, arbeidskapital og likviditetsgrad 1 i ren Python/Pandas.
-5. **Strukturert KI-ledelseskommentar:** Språkmodellen mottar kun aggregerte nøkkeltall og avviksstatus (ingen råtransaksjoner), og returnerer et strukturert ledelsesnotat på formelt norsk validert mot Pydantic-skjemaet `ManagementCommentary`.
-6. **Frakoblet sensormodus (Mock KI):** Sensor kan kjøre applikasjonen 100 % lokalt og offline med eksempeldataene i `data/sample/` uten OpenAI API-nøkkel.
-7. **To-formats styrepakke i minnet (PDF og HTML):** Brukeren kan laste ned styrepakken både som PDF (`Styrepakke_Ledelsesrapport.pdf`) og som én selvstendig HTML-fil (`Styrepakke_Ledelsesrapport.html`), generert i minnet (`io.BytesIO`) fra nøyaktig samme datagrunnlag og Pydantic-objekt.
-8. **Responstid:** Hele løpet fra filopplasting til ferdig skjermrapport og eksport utføres på under 5 sekunder ved lokal kjøring i testmodus.
+4. **Deterministiske nøkkeltall (CFO-pakke):** Systemet beregner driftsinntekter, varekostnad, bruttofortjeneste, bruttomargin, lønnskostnad, lønnsandel, andre driftskostnader, samlede driftskostnader, driftsresultat (EBIT), driftsmargin, ordinært resultat, bankinnskudd, kundefordringer, leverandørgjeld, arbeidskapital, likviditetsgrad 1 og 2, reell egenkapital (inkl. udisponert mellombalanse-resultat), egenkapitalandel, gjeldsgrad, totalkapitalrentabilitet (TKR) og egenkapitalrentabilitet (EKR) i ren Python/Pandas.
+5. **Hovedbok-drilldown, lønnsomhetsmotor og SQLite-historikk:** Brukeren kan drille ned fra kontonivå til enkelttransaksjoner med løpende saldo og bilagsinspektør, få deterministisk beregnet NOK-lønnsomhetspotensial mot SMB-normer, og sammenligne historiske perioder lagret i lokal, git-ignorert SQLite-database (`data/g56_accounting.db`) med SHA-256-deduplikasjon.
+6. **Strukturert KI-ledelseskommentar:** Språkmodellen mottar kun aggregerte nøkkeltall, lønnsomhetsråd og avviksstatus (ingen råtransaksjoner), og returnerer et strukturert ledelsesnotat på formelt norsk validert mot Pydantic-skjemaet `ManagementCommentary`.
+7. **Frakoblet sensormodus (Mock KI):** Sensor kan kjøre applikasjonen 100 % lokalt og offline med eksempeldataene i `data/sample/` uten OpenAI API-nøkkel.
+8. **To-formats styrepakke i minnet (PDF og HTML):** Brukeren kan laste ned styrepakken både som PDF (`Styrepakke_Ledelsesrapport.pdf`) og som én selvstendig HTML-fil (`Styrepakke_Ledelsesrapport.html`), generert i minnet (`io.BytesIO`) fra nøyaktig samme datagrunnlag og Pydantic-objekt.
+9. **Responstid:** Hele løpet fra filopplasting til ferdig skjermrapport og eksport utføres på under 5 sekunder ved lokal kjøring i testmodus.
 
 ---
 
@@ -61,6 +62,12 @@ All matematikk, balansekontroll ($\sum \text{Debet} = \sum \text{Kredit}$), krys
 * **PDF-eksport:** In-memory PDF-styrepakke via ReportLab (`src/pdf_generator.py`).
 * **HTML-eksport (Nytt i v1.1):** In-memory, selvstendig HTML-styrepakke (`src/html_report.py`) med inline CSS som kan åpnes direkte i nettleser uten Streamlit og uten nettverkstilgang.
 * **Syntetiske testdata:** Eksempelfiler med kjent fasit i `data/sample/`.
+
+### 3.1b Inkludert i v2.0 (Strategisk Finansanalyse, HB-Drilldown & SQLite-Historikk)
+* **Relasjonell SQLite-database (`src/database.py`):** 6 normaliserte tabeller (`accounts`, `analysis_runs`, `trial_balance_entries`, `ledger_transactions`, `financial_metrics`, `ai_insights`) lagret i git-ignorert `data/g56_accounting.db` med fremmednøkler (`ON DELETE CASCADE`), SQLite Window Functions for løpende saldo og automatisk SHA-256-deduplikasjon ved opplasting.
+* **Utvidet CFO-nøkkeltallspakke (`src/compliance_engine.py`):** Fortegnsnormalisering (`abs()`) for kreditsaldoer i NS 4102 klasse 2, reell mellombalanse-egenkapital (bokført EK + udisponert perioderesultat), Lønnsandel, Likviditetsgrad 2, Egenkapitalandel, Gjeldsgrad, Totalkapitalrentabilitet (TKR) og Egenkapitalrentabilitet (EKR).
+* **Hovedbok-utforsker og deterministisk lønnsomhetsmotor (`src/ledger_analytics.py`):** Konto-drilldown med løpende saldo fra IB til UB, bilagsinspektør som verifiserer debet/kredit per bilagsnummer, kostnadsdriveranalyse og regelbaserte lønnsomhetsråd med eksakt NOK-potensial (uten interaktive slidere).
+* **Flersides Streamlit-arkitektur (`st.navigation` i `src/app.py` + `src/views/`):** 4 dedikerte sider (*Opplasting & Kontroll*, *Finansiell Analyse & HB*, *KI-Rådgiver & Eksport*, *Historikk & Trendanalyse*) samt utvidet PDF/HTML-styrepakke med soliditet/rentabilitet og lønnsomhetspotensial.
 
 ### 3.2 Eksplisitt utenfor scope
 * **Ingen utskifting av Streamlit:** UI-et skal ikke byttes ut med en frittstående HTML-applikasjon eller Single Page Application (SPA). HTML-leveransen er kun en nedlastbar rapportfil i tillegg til PDF.
@@ -196,6 +203,39 @@ All matematikk, balansekontroll ($\sum \text{Debet} = \sum \text{Kredit}$), krys
 
 ---
 
+### Epic 6: Relasjonell SQLite-Database og Historikkmotor (Nytt i v2.0)
+*Mål: Lagre verifiserte regnskapsanalyser, nøkkeltall og KI-innsikt relasjonelt uten ekstern server (Kriterium 6), med SHA-256-deduplikasjon og kaskadesletting.*
+
+* **Story 6.1: Automatisk relasjonslagring og historikksammenligning i SQLite**
+  * **Brukerhistorie:** Som daglig leder ønsker jeg at gyldige regnskapsanalyser lagres automatisk i en lokal SQLite-database slik at jeg kan sammenligne marginer, likviditet og soliditet på tvers av perioder og gjenåpne tidligere rapporter.
+  * **Kravkobling:** FR-6.1, FR-6.2, NFR-3.1
+  * **Pytest-referanse:** `tests/test_database.py::TestDatabaseLayer::test_persistent_sqlite_file_and_sha256_deduplication`, `test_ai_insight_upsert_and_run_details`, `test_sql_window_function_running_balance_and_cascade_delete`
+  * **Status:** Implementert
+
+---
+
+### Epic 7: Utvidet CFO-Nøkkeltallspakke og Hovedbok-Drilldown (Nytt i v2.0)
+*Mål: Utvide fra kontrollverktøy til komplett CFO-innsikt med likviditet, soliditet, rentabilitet og bilagsnivå-drilldown i Hovedbok.*
+
+* **Story 7.1: Deterministisk CFO KPI-pakke, HB-drilldown og regelbasert lønnsomhetsmotor**
+  * **Brukerhistorie:** Som daglig leder ønsker jeg å se Likviditetsgrad 1 og 2, Egenkapitalandel (inkl. mellombalanse-resultat), TKR/EKR, drille ned på enkeltkontoer og bilag med løpende saldo, og få eksakt beregnet NOK-lønnsomhetspotensial mot SMB-normer.
+  * **Kravkobling:** FR-7.1, FR-7.2, FR-7.3
+  * **Pytest-referanse:** `tests/test_compliance.py::TestComplianceEngine::test_cfo_metrics_and_sign_normalization_on_sample_data`, `test_zero_division_safety_in_cfo_metrics`, `tests/test_ledger_analytics.py::TestLedgerAnalytics::test_extract_period_label`, `test_account_drilldown_running_balance_matches_ub`, `test_voucher_details_balances_per_voucher`, `test_cost_drivers_and_deterministic_profitability_recommendations`
+  * **Status:** Implementert
+
+---
+
+### Epic 8: Flersides Streamlit-Arkitektur og Utvidet Styrepakke (Nytt i v2.0)
+*Mål: Organisere kontroll, finansanalyse, KI-rådgiver og historikk i 4 oversiktlige sider (`st.navigation`) og inkludere utvidede nøkkeltall/lønnsomhetsråd i PDF og HTML.*
+
+* **Story 8.1: Flersides navigasjon og utvidet PDF/HTML-eksport**
+  * **Brukerhistorie:** Som daglig leder ønsker jeg et ryddig flersides grensesnitt der opplastet tilstand bevares sømløst på tvers av sider, og der PDF- og HTML-styrepakken inkluderer soliditet, rentabilitet og deterministisk lønnsomhetspotensial.
+  * **Kravkobling:** FR-8.1, FR-8.2
+  * **Pytest-referanse:** `tests/test_app_ui.py::TestMultipageArchitectureAndEndToEnd::test_multipage_views_and_orchestrator_compile_and_export_callables`, `test_end_to_end_v2_pipeline_green_and_red_paths_with_sqlite_history`, `tests/test_reporting.py::TestReportingAndExport::test_pdf_and_html_include_extended_cfo_metrics_and_recommendations`
+  * **Status:** Implementert
+
+---
+
 ## 5. Funksjonelle Krav (FR-tabell)
 
 | ID | Krav | Akseptkriterium (Testbart) | Automatisk Test (`pytest`) | Sensor-kriterium (1–7) | Status |
@@ -218,6 +258,13 @@ All matematikk, balansekontroll ($\sum \text{Debet} = \sum \text{Kredit}$), krys
 | **FR-5.4** | **Tilgjengelighet og responsivitet i HTML** | HTML-rapporten bruker semantiske HTML5-elementer, norsk språk (`lang="nb"`), WCAG AA-kontrast ($\ge 4,5:1$), responsiv visning for smal skjerm (`@media (max-width: 640px)`) og utskriftsstilark (`@media print`). | `tests/test_reporting.py::test_html_generation_produces_valid_self_contained_html` | K4, K5 | Implementert |
 | **FR-5.5** | **HTML-nedlasting i Streamlit UI** | `src/app.py` viser en nedlastingsknapp (`📥 Last ned Styrepakke (HTML)`) ved siden av PDF-knappen som leverer `Styrepakke_Ledelsesrapport.html` (`mime="text/html"`). | `tests/test_reporting.py::test_html_generation_produces_valid_self_contained_html` + manuell UI-test | K2, K4 | Implementert |
 | **FR-5.6** | **XSS-sikring og UTF-8 spesialtegn i HTML** | All dynamisk tekst (`company_name`, `Kontonavn` og tekstfelter fra `ManagementCommentary`) escapes med `html.escape()` før innsetting i HTML-malen, og norske tegn (`ÆØÅ`) gjengis uten tegnsettfeil. | `tests/test_reporting.py::test_html_generation_produces_valid_self_contained_html` | K3, K5 | Implementert |
+| **FR-6.1** | **Relasjonell SQLite-lagring med SHA-256** | `DatabaseManager` lagrer kontoplan, SB, HB, nøkkeltall, lønnsomhetsråd og KI-rapporter i 6 relasjonelle tabeller (`PRAGMA foreign_keys = ON`, `ON DELETE CASCADE`) og dedupliserer identiske kjøringer via SHA-256 hash. | `tests/test_database.py::test_persistent_sqlite_file_and_sha256_deduplication`, `test_ai_insight_upsert_and_run_details` | K2, K3, K5, K6 | Implementert |
+| **FR-6.2** | **SQL Window Function saldo & kaskadesletting** | `query_ledger_transactions()` beregner løpende saldo fra IB til UB med SQLite Window Function (`SUM(...) OVER (...)`), og `delete_analysis_run()` fjerner alle relaterte rader. | `tests/test_database.py::test_sql_window_function_running_balance_and_cascade_delete` | K2, K3, K5 | Implementert |
+| **FR-7.1** | **CFO-nøkkeltall (Soliditet, LG2, TKR, EKR)** | `calculate_detailed_financial_metrics()` normaliserer kreditsaldoer i klasse 2 med `abs()`, beregner mellombalanse-egenkapital, Likviditetsgrad 2, Egenkapitalandel, Gjeldsgrad, TKR og EKR med vern mot null-divisjon. | `tests/test_compliance.py::test_cfo_metrics_and_sign_normalization_on_sample_data`, `test_zero_division_safety_in_cfo_metrics` | K1, K2, K3 | Implementert |
+| **FR-7.2** | **Hovedbok-drilldown og bilagsinspektør** | `get_account_drilldown()` og `get_voucher_details()` gir løpende kontosaldo mot SB UB og debet/kredit-kontroll per bilagsnummer, mens opplasting bevarer både `Kontonavn` og `Beskrivelse`. | `tests/test_ledger_analytics.py::test_account_drilldown_running_balance_matches_ub`, `test_voucher_details_balances_per_voucher`, `tests/test_data_pipeline.py::test_ledger_upload_preserves_both_kontonavn_and_beskrivelse` | K2, K3, K4 | Implementert |
+| **FR-7.3** | **Deterministisk lønnsomhetsmotor** | `summarize_cost_drivers()` og `generate_profitability_recommendations()` beregner eksakt NOK-potensial mot SMB-normer i Python før payload sendes over *The AI Firewall*. | `tests/test_ledger_analytics.py::test_cost_drivers_and_deterministic_profitability_recommendations` | K1, K2, K3, K5 | Implementert |
+| **FR-8.1** | **Flersides Streamlit-arkitektur (`st.navigation`)** | `src/app.py` og `src/views/` organiserer appen i 4 sider med delt `st.session_state` og ende-til-ende flyt for både grønn og rød sti. | `tests/test_app_ui.py::test_multipage_views_and_orchestrator_compile_and_export_callables`, `test_end_to_end_v2_pipeline_green_and_red_paths_with_sqlite_history` | K4, K5, K6 | Implementert |
+| **FR-8.2** | **Utvidet PDF- og HTML-styrepakke** | Både `generate_management_pdf()` og `generate_management_html()` inkluderer soliditets-/rentabilitetsnøkkeltall og tabell over deterministisk lønnsomhetspotensial med bakoverkompatibel signatur. | `tests/test_reporting.py::test_pdf_and_html_include_extended_cfo_metrics_and_recommendations` | K2, K3, K4, K5 | Implementert |
 
 ---
 
@@ -228,7 +275,7 @@ All matematikk, balansekontroll ($\sum \text{Debet} = \sum \text{Kredit}$), krys
 | **NFR-1.1** | **The AI Firewall** | Språkmodellen (`gpt-4o-mini`) skal **aldri** utføre addisjon, subtraksjon, marginberegning eller avstemming. Alle tall beregnes deterministisk i Python/Pandas før de sendes som read-only kontekst, og tekstresponsen valideres via Pydantic (`ManagementCommentary`). | Runtime `assert` i `src/llm_integration.py` + `test_ai_firewall_context_never_contains_raw_transactions`. |
 | **NFR-1.2** | **Frakoblet Sensormodus** | Applikasjonen skal fungere 100 % lokalt og offline uten OpenAI API-nøkkel, ekstern database, Docker eller betalte skytjenester når «Bruk testmodus (Mock KI)» er aktivert. | Standardvalg i `src/app.py` + `test_mock_mode_generates_valid_commentary`. |
 | **NFR-2.1** | **Ytelse (< 5 sekunder)** | Lokal innlesing, balansekontroll, kryssavstemming, nøkkeltallsberegning, mock-KI og generering av både PDF og HTML for datasett opp til 5 000 rader skal fullføres på under 5 sekunder. | Vektoriserte Pandas-operasjoner og in-memory generering. |
-| **NFR-3.1** | **Minnesikkerhet (In-Memory)** | Opplastede regnskapsfiler (`.csv`, `.xlsx`) og genererte styrepakker (`.pdf`, `.html`) skal behandles utelukkende i minnet (`io.BytesIO`) og aldri skrives til disk. | Kodeinspeksjon av `src/data_pipeline.py`, `src/pdf_generator.py` og `src/html_report.py`. |
+| **NFR-3.1** | **Minnesikkerhet & Lokal SQLite** | Opplastede regnskapsfiler (`.csv`, `.xlsx`) og genererte styrepakker (`.pdf`, `.html`) behandles utelukkende i minnet (`io.BytesIO`). Verifiserte analyser og relasjoner lagres i en lokal, git-ignorert SQLite-database (`data/g56_accounting.db`) med SHA-256 deduplikasjon. | Kodeinspeksjon av `src/data_pipeline.py`, `src/database.py` og `.gitignore` + `tests/test_database.py`. |
 | **NFR-3.2** | **Ingen hemmeligheter i repo** | Ingen API-nøkler eller passord skal ligge i kildekode eller git-historikk. `.env` ignoreres i `.gitignore`, og `.env.example` dokumenterer variabelnavn uten nøkkel. | Sjekk ved oppstart (`check_env_security()`) og `.gitignore`. |
 | **NFR-4.1** | **Universell utforming (WCAG)** | Både Streamlit-UI, PDF og HTML-styrepakke skal benytte semantiske statusfarger (grønn `#16a34a` ved godkjent, rød `#b91c1c` ved avvik, mørk blå `#1e3a8a` for struktur) kombinert med tekstlig statusetikett og kontrastforhold $\ge 4,5:1$. | Gjennomgang mot `docs/03_ux/UX_DESIGN_OG_WIREFRAMES.md`. |
 | **NFR-5.1** | **Norske regnskapsstandarder** | Støtte for semikolon (`;`) og komma (`,`) som feltskilletegn, mellomrom/punktum som tusenskilletegn og komma som desimaltegn (`100 000,00`), samt mapping mot NS 4102. | `test_norwegian_semicolon_and_comma_decimal` og `test_ns4102_mapping`. |
@@ -255,6 +302,9 @@ Denne matrisen dokumenterer ende-til-ende-sporbarhet fra brukerhistorie til kild
 | **Epic 4 / Story 4.1** | FR-4.1, FR-4.2 | `src/pdf_generator.py::generate_management_pdf`, `src/app.py` | `tests/test_reporting.py::TestReportingAndExport::test_pdf_generation_produces_valid_pdf_buffer`, `tests/test_data_pipeline.py::TestDataPipelineEdgeCases::test_large_numbers_and_norwegian_special_characters_pdf` | K2, K3, K4 | Implementert |
 | **Epic 5 / Story 5.1** | FR-5.1, FR-5.2, FR-5.4, FR-5.5, FR-5.6 | `src/html_report.py::generate_management_html`, `src/app.py` | `tests/test_reporting.py::TestReportingAndExport::test_html_generation_produces_valid_self_contained_html` | K1, K2, K3, K4, K5 | Implementert |
 | **Epic 5 / Story 5.1** | FR-5.3 | `src/html_report.py::generate_management_html` | `tests/test_reporting.py::TestReportingAndExport::test_html_generation_includes_discrepancies_and_excludes_raw_transactions` | K2, K3, K4, K5 | Implementert |
+| **Epic 6 / Story 6.1** | FR-6.1, FR-6.2 | `src/database.py::DatabaseManager` (`save_or_get_analysis_run`, `save_ai_insight`, `query_ledger_transactions`, `delete_analysis_run`) | `tests/test_database.py::TestDatabaseLayer::test_persistent_sqlite_file_and_sha256_deduplication`, `test_ai_insight_upsert_and_run_details`, `test_sql_window_function_running_balance_and_cascade_delete` | K2, K3, K5, K6 | Implementert |
+| **Epic 7 / Story 7.1** | FR-7.1, FR-7.2, FR-7.3 | `src/compliance_engine.py::calculate_detailed_financial_metrics`, `src/ledger_analytics.py`, `src/data_pipeline.py::normalize_column_names` | `tests/test_compliance.py::TestComplianceEngine::test_cfo_metrics_and_sign_normalization_on_sample_data`, `test_zero_division_safety_in_cfo_metrics`, `tests/test_ledger_analytics.py::TestLedgerAnalytics::*`, `tests/test_data_pipeline.py::TestDataPipelineEdgeCases::test_ledger_upload_preserves_both_kontonavn_and_beskrivelse` | K1, K2, K3, K4, K5 | Implementert |
+| **Epic 8 / Story 8.1** | FR-8.1, FR-8.2 | `src/app.py`, `src/views/*`, `src/pdf_generator.py::generate_management_pdf`, `src/html_report.py::generate_management_html` | `tests/test_app_ui.py::TestMultipageArchitectureAndEndToEnd::*`, `tests/test_reporting.py::TestReportingAndExport::test_pdf_and_html_include_extended_cfo_metrics_and_recommendations` | K2, K3, K4, K5, K6 | Implementert |
 
 ---
 
@@ -262,9 +312,9 @@ Denne matrisen dokumenterer ende-til-ende-sporbarhet fra brukerhistorie til kild
 
 Følgende punkter ble identifisert under revisjonen til v1.1 og er nå **ferdig lukket og verifisert**:
 
-1. **Konsistent testantall på tvers av dokumentasjonen (K3 / K6) — LUKKET:**
-   * `pytest -v tests/` har nå **30** beståtte tester (9 i `test_compliance.py`, 12 inkl. parametriserte i `test_data_pipeline.py`, og 9 i `test_reporting.py`).
-   * Tidligere avvik mellom `README.md` og `docs/KVALITETSSIKRING_OG_TESTING.md` er nå synkronisert til **30** i alle filer.
+1. **Konsistent testantall på tvers av dokumentasjonen (K3 / K6) — LUKKET OG OPPDATERT (v2.0):**
+   * `pytest -v tests/` har nå **43** beståtte tester fordelt på 6 testfiler (`test_compliance.py`, `test_data_pipeline.py`, `test_database.py`, `test_ledger_analytics.py`, `test_reporting.py` og `test_app_ui.py`).
+   * Testantallet (**43**) er synkronisert i `README.md`, `PRD.md` og `docs/KVALITETSSIKRING_OG_TESTING.md`.
 2. **Synkronisering av arkitektur- og UX-dokumentasjon etter Epic 5 (K1 / K4 / K5) — LUKKET:**
    * Mappestrukturen og dataflytdiagrammet i `docs/04_architecture/ARCHITECTURE.md`, wireframes i `docs/03_ux/UX_DESIGN_OG_WIREFRAMES.md`, testtabellen i `docs/KVALITETSSIKRING_OG_TESTING.md` og filoversikten i `README.md` er oppdatert med `src/html_report.py` slik at planleggingsdokumentene samsvarer 100 % med levert kode.
 3. **Clone-URL i README (K6) — VERIFISERT:**
@@ -279,4 +329,5 @@ Følgende punkter ble identifisert under revisjonen til v1.1 og er nå **ferdig 
 | Versjon | Dato | Forfatter | Beskrivelse av endring |
 |:---|:---|:---|:---|
 | **v1.0** | 2026-10-15 | Victor Guimaraes (G56) | Første utgave av PRD basert på revidert `product-brief.md` (Epic 1–4: Filinntak, Balanse- og kryssavstemming, KI-rapport med Mock-modus og PDF-eksport). |
-| **v1.1** | 2026-11-02 | Victor Guimaraes (G56) / `bmad-agent-pm` | **Godkjent v1.1 — Lagt til Epic 5 (FR-5.1 til FR-5.6): Presentasjonsklar HTML-styrepakke.** Låst funksjonssignatur for `src/html_report.py::generate_management_html`, lagt til eksplisitt XSS-sikringskrav (`html.escape` i FR-5.6), oppdatert sporbarhetsmatrise med alle 26 eksisterende pytest-tester og planlagte HTML-tester, strammet kravkoblinger mot sensorveiledningens 7 kriterier, og dokumentert åpne punkter for K5–K7. **Hvorfor dette ikke endrer regnskapskjernen:** HTML-eksporten (`src/html_report.py`) er en ren visnings- og serialiseringsmodul nedstrøms for *The AI Firewall*. Den leser kun de allerede beregnede og testede datastrukturene fra `compliance_engine.py` og `llm_integration.py` (`ManagementCommentary`), og påvirker verken filinnlesing, balansekontroll ($\sum D = \sum K$), kryssavstemming ($\text{IB} + \text{HB} = \text{UB}$), NS 4102-mapping eller PDF-generering. |
+| **v1.1** | 2026-11-02 | Victor Guimaraes (G56) / `bmad-agent-pm` | **Godkjent v1.1 — Lagt til Epic 5 (FR-5.1 til FR-5.6): Presentasjonsklar HTML-styrepakke.** Låst funksjonssignatur for `src/html_report.py::generate_management_html`, lagt til eksplisitt XSS-sikringskrav (`html.escape` i FR-5.6), oppdatert sporbarhetsmatrise med alle eksisterende pytest-tester og HTML-tester. |
+| **v2.0** | 2026-11-07 | Victor Guimaraes (G56) / `bmad-agent-architect` | **Godkjent v2.0 — Strategisk Finansanalyse, Hovedbok-Drilldown og SQLite-Historikk (Epic 6–8):** (1) Innført relasjonell SQLite-database (`src/database.py`, git-ignorert `data/g56_accounting.db`) med 6 tabeller, fremmednøkler (`ON DELETE CASCADE`), SQLite Window Functions for løpende saldo og SHA-256-deduplikasjon. (2) Utvidet deterministisk CFO KPI-pakke i `src/compliance_engine.py` med fortegnsretting (`abs()`), mellombalanse-egenkapital, Likviditetsgrad 2, Lønnsandel, Egenkapitalandel, Gjeldsgrad, TKR og EKR. (3) Ny modul `src/ledger_analytics.py` for konto-drilldown, bilagsinspektør og regelbasert lønnsomhetsmotor uten slidere. (4) Omstrukturert UI til 4 sider via `st.navigation` (`src/views/`) og utvidet PDF/HTML-styrepakke samt testsuiten til 43 tester. |

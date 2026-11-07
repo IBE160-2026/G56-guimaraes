@@ -17,9 +17,9 @@ Arkitekturen reduserer risikoen for tallhallusinasjoner ved at alle økonomiske 
 
 ---
 
-## 2. Fem Konkrete Eksempler på Kritisk Styring og Korrigering av KI
+## 2. Seks Konkrete Eksempler på Kritisk Styring og Korrigering av KI
 
-Sensorveiledningen legger avgjørende vekt på at gruppen ikke bare aksepterer KI-forslag ukritisk, men aktivt vurderer, korrigerer og styrer KI. Her er fem sentrale iterasjoner:
+Sensorveiledningen legger avgjørende vekt på at gruppen ikke bare aksepterer KI-forslag ukritisk, men aktivt vurderer, korrigerer og styrer KI. Her er seks sentrale iterasjoner:
 
 ### Iterasjon 1: Kritisk nedskalering av scope (Fra overambisiøs KI til fokusert kjerne)
 * **KI-ens opprinnelige forslag:** KI-assistenten foreslo opprinnelig å bygge en massiv plattform med fem filtyper (saldobalanse, reskontro, timelister, CRM, ESG), SAF-T XML-parsing, flervaluta og Stripe-abonnementsbetaling i v1.
@@ -49,6 +49,13 @@ Sensorveiledningen legger avgjørende vekt på at gruppen ikke bare aksepterer K
 * **Problem avdekket:** Risiko for at ufiltrerte transaksjonsdetaljer eller delvise regnestykker ble lekket inn i prompten, noe som kunne føre til at LLM forsøkte å regne på tallene selv.
 * **Beslutning og styring:** Vi tvang inn en formell runtime-assertion i `build_financial_context()`: `assert 'raw_transactions' not in payload` og `assert isinstance(EBIT, (int, float))`. Samtidig ble det skrevet en dedikert enhetstest (`test_ai_firewall_context_never_contains_raw_transactions`) som garanterer at koden regner og KI-en kun forklarer.
 
+### Iterasjon 6: Strategisk oppskalering til v2.0 med `/grill-me` og `/plan` (SQLite & Prescriptive Analytics)
+* **Utfordring ved utvidet scope:** Da applikasjonen skulle utvides fra et rent kontrollverktøy til en strategisk innsiktsplattform (CFO-nøkkeltall, HB-drilldown, lønnsomhetsråd og historikkdatabase), vurderte vi flere arkitekturvalg opp mot *The AI Firewall* og Kriterium 6 (enkel lokal kjørbarhet for sensor).
+* **Aktiv designstyring før koding:** Gjennom strukturert kravavklaring (`/grill-me`) og arkitekturplanlegging (`/plan`) tok vi tre kritiske styringsvalg:
+  1. **SQLite fremfor eksterne databaser:** Vi valgte innebygd `sqlite3` (`data/g56_accounting.db`, ekskludert i `.gitignore`) med relasjonelt 6-tabellers skjema, fremmednøkler (`ON DELETE CASCADE`), SQLite Window Functions og SHA-256-deduplikasjon — null ekstra oppsett eller Docker for sensor.
+  2. **Regelbasert lønnsomhetsmotor i Python fremfor KI-gjetting:** For å gi datadrevne lønnsomhetsråd uten tallhallusinasjoner bygget vi `generate_profitability_recommendations()` i `src/ledger_analytics.py`, som deterministisk regner ut eksakt NOK-potensial mot SMB-normer (f.eks. frigjort kapital ved reduksjon av kundefordringer) *før* tallene sendes som read-only JSON til LLM-en.
+  3. **Mellombalanse-egenkapital og fortegnsvern:** Vi fanget opp at kreditsaldoer i NS 4102 klasse 2 eksporteres med negativt fortegn i norske CSV-filer, og at udisponert perioderesultat må legges til bokført egenkapital i mellombalanser for at $\text{Eiendeler} = \text{Egenkapital} + \text{Gjeld}$ skal stemme i soliditets- og EKR-beregningen.
+
 ---
 
 ## 3. System- og Brukerprompts i Produksjon
@@ -59,10 +66,11 @@ Du er en topp 10 % erfaren CFO og statsautorisert revisor (Strategisk Regnskapsf
 Du leverer en sylskarp, profesjonell og pedagogisk ledelsesrapport til daglig leder og styret basert på Norsk Standard Kontoplan (NS 4102). 
 
 STRENGE REGLER (GOVERNANCE):
-1. KODEN REGNER, DU FORKLARER: Du skal ALDRI finne på egne tall eller regne ut nye verdier. Bruk utelukkende de ferdig beregnede nøkkeltallene og avstemmingsdataene i payloaden.
-2. FOKUS PÅ SAMMENHENG: Forklar hvorfor tallene er som de er (f.eks. sammenhengen mellom omsetning, varekostnad, arbeidskapital og likviditetsreserve).
-3. REVISORIKK: Hvis avstemmingen viser avvik i formelen (IB + HB = UB), må du være nådeløs og forklare styreansvaret og risikoen for feil i bokføringen. Hvis den er godkjent, bekreft tryggheten.
-4. TONE OF VOICE: Formell, forretningsmessig, konsis og rådgivende norsk. Unngå floskler og generelle selvfølgeligheter.
+1. KODEN REGNER, DU FORKLARER: Du skal ALDRI finne på egne tall eller regne ut nye verdier. Bruk utelukkende de ferdig beregnede nøkkeltallene, lønnsomhetsrådene og avstemmingsdataene i payloaden.
+2. FOKUS PÅ SAMMENHENG: Forklar hvorfor tallene er som de er (sammenhengen mellom omsetning, varekostnad, arbeidskapital, soliditet, rentabilitet og likviditetsreserve).
+3. PRESKRIPTIV LØNNSOMHETSRÅDGIVNING: Bygg tiltakslisten og analysen direkte på de ferdig utregnede NOK-potensialene i 'deterministiske_lonnsomhetsrad' og 'kostnadsdrivere_topp_5'.
+4. REVISORBLIKK: Hvis avstemmingen viser avvik i formelen (IB + HB = UB), må du være nådeløs og forklare styreansvaret og risikoen for feil i bokføringen. Hvis den er godkjent, bekreft tryggheten.
+5. TONE OF VOICE: Formell, forretningsmessig, konsis og rådgivende norsk. Unngå floskler og generelle selvfølgeligheter.
 ```
 
 ### B. User Prompt Payload (Strukturert JSON)
@@ -78,6 +86,7 @@ Her er fullstendig verifiserte regnskapsdata og avstemmingsresultat for perioden
     "Bruttofortjeneste_NOK": 140000.0,
     "Bruttomargin_prosent": 70.0,
     "Lonnskostnad_NOK": 30000.0,
+    "Lonnsandel_prosent": 15.0,
     "Samlede_Driftskostnader_NOK": 90000.0,
     "Driftsresultat_EBIT_NOK": 110000.0,
     "Driftsmargin_prosent": 55.0
@@ -85,8 +94,31 @@ Her er fullstendig verifiserte regnskapsdata og avstemmingsresultat for perioden
   "arbeidskapital_og_likviditet": {
     "Bankinnskudd_UB_NOK": 180000.0,
     "Kundefordringer_UB_NOK": 90000.0,
-    "Leverandorgjeld_UB_NOK": 50000.0
+    "Leverandorgjeld_UB_NOK": 50000.0,
+    "Arbeidskapital_NOK": 220000.0,
+    "Likviditetsgrad_1": 5.4,
+    "Likviditetsgrad_2": 5.4
   },
+  "soliditet_og_rentabilitet": {
+    "Bokfort_Egenkapital_UB_NOK": 110000.0,
+    "Reell_Egenkapital_Inkl_Resultat_UB_NOK": 220000.0,
+    "Totalkapital_UB_NOK": 270000.0,
+    "Egenkapitalandel_prosent": 81.48,
+    "Gjeldsgrad": 0.23,
+    "Totalkapitalrentabilitet_TKR_prosent": 52.38,
+    "Egenkapitalrentabilitet_EKR_prosent": 66.67
+  },
+  "kostnadsdrivere_topp_5": [
+    {"konto": "4000", "kontonavn": "Innkjøp av råvarer", "belop_nok": 60000.0, "andel_av_driftskost_pct": 66.67},
+    {"konto": "5000", "kontonavn": "Lønn til ansatte", "belop_nok": 30000.0, "andel_av_driftskost_pct": 33.33}
+  ],
+  "deterministiske_lonnsomhetsrad": [
+    {
+      "kategori": "Arbeidskapital",
+      "tittel": "Reduser kapitalbinding i kundefordringer",
+      "beregnet_effekt_nok": 50000.0
+    }
+  ],
   "avstemming_hovedbok_mot_saldobalanse": {
     "status": "GODKJENT (100% konsistent)",
     "kommentar": "Alle transaksjoner i hovedboken stemmer nøyaktig med endring mellom IB og UB i saldobalansen (0 avvik funnet)."
@@ -116,7 +148,7 @@ flowchart LR
 ```
 
 1. **`01_analysis/`:** Analyse av forretningsdomenet, GRS/IFRS og begrunnelse for avvik fra proposal.
-2. **`02_product/PRD.md`:** 5 Epics, 8 User Stories, funksjonelle formelkrav ($IB + HB = UB$), HTML- og PDF-eksport og sporbarhetsmatrise.
-3. **`03_ux/`:** Wireframes, informasjonsarkitektur og universell utforming for Streamlit-dashbordet.
-4. **`04_architecture/ARCHITECTURE.md`:** Dataflyt, AI Firewall, systemgrenser og mock-arkitektur.
-5. **`tests/`:** 30 automatiserte tester som verifiserer koden mot PRD-kravene.
+2. **`02_product/PRD.md`:** 8 Epics (v2.0), funksjonelle formelkrav ($IB + HB = UB$), CFO KPI-pakke, SQLite-historikk, HTML- og PDF-eksport samt full sporbarhetsmatrise.
+3. **`03_ux/`:** Wireframes, flersides informasjonsarkitektur (`st.navigation`) og universell utforming for Streamlit-dashbordet.
+4. **`04_architecture/ARCHITECTURE.md`:** Dataflyt, AI Firewall, relasjonelt SQLite ER-skjema og mock-arkitektur.
+5. **`tests/`:** 43 automatiserte tester som verifiserer koden mot PRD-kravene.

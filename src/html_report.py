@@ -1,6 +1,6 @@
 import html
 import io
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 
 def _format_nok(value: float, decimals: int = 0) -> str:
@@ -26,15 +26,16 @@ def generate_management_html(
     company_name: str,
     ai_report: Any,
     metrics: dict,
-    recon_result: Optional[Dict[str, Any]] = None
+    recon_result: Optional[Dict[str, Any]] = None,
+    recommendations: Optional[List[Dict[str, Any]]] = None,
 ) -> io.BytesIO:
     """
     Genererer en selvstendig, responsiv og offline-klar HTML5-styrepakke direkte i minnet (io.BytesIO).
-    
+
     ARKITEKTURGARANTI (The AI Firewall & FR-5.1 / FR-5.2):
     - Ingen tall beregnes i denne modulen, i HTML, i JavaScript eller av språkmodellen.
-    - Alle nøkkeltall (metrics), avstemmingsresultater (recon_result) og KI-tekster (ai_report)
-      kommer ferdig utregnet og validert fra Python/Pydantic.
+    - Alle nøkkeltall (metrics), lønnsomhetsråd (recommendations), avstemmingsresultater (recon_result)
+      og KI-tekster (ai_report) kommer ferdig utregnet og validert fra Python/Pydantic.
     - All dynamisk tekst renses med html.escape() (FR-5.6).
     """
     safe_company = html.escape(str(company_name or "Selskap AS"))
@@ -79,6 +80,10 @@ def generate_management_html(
     bruttomargin_str = _format_percent(metrics.get("bruttomargin", 0.0), decimals=1)
     arbeidskapital_str = _format_nok(metrics.get("arbeidskapital", 0.0), decimals=0)
     likviditetsgrad_str = f"{float(metrics.get('likviditetsgrad_1', 0.0)):.2f}".replace(".", ",")
+    likviditetsgrad_2_str = f"{float(metrics.get('likviditetsgrad_2', 0.0)):.2f}".replace(".", ",")
+    egenkapitalandel_str = _format_percent(metrics.get("egenkapitalandel", 0.0), decimals=1)
+    tkr_str = _format_percent(metrics.get("totalkapitalrentabilitet", 0.0), decimals=1)
+    ekr_str = _format_percent(metrics.get("egenkapitalrentabilitet", 0.0), decimals=1)
 
     # Avvikstabell eller tydelig tomtilstand (FR-5.3)
     if not is_reconciled and discrepancies_df is not None and not discrepancies_df.empty:
@@ -133,7 +138,55 @@ def generate_management_html(
     hovedkonklusjon = html.escape(str(getattr(ai_report, "hovedkonklusjon", "")))
     lonnsomhet = html.escape(str(getattr(ai_report, "lonnsomhet_og_marginer", "")))
     likviditet = html.escape(str(getattr(ai_report, "likviditet_og_arbeidskapital", "")))
+    soliditet_rentabilitet = html.escape(
+        str(
+            getattr(
+                ai_report,
+                "soliditet_og_rentabilitet",
+                "Soliditet og kapitalavkastning er innenfor normale rammer for perioden.",
+            )
+        )
+    )
     revisor_notat = html.escape(str(getattr(ai_report, "revisors_avstemmingsnotat", "")))
+
+    # Deterministiske lønnsomhetsråd fra Python (dersom oppgitt)
+    deterministic_section_html = ""
+    if recommendations:
+        det_rows = []
+        for r in recommendations:
+            kat_txt = html.escape(str(r.get("kategori", "")))
+            tit_txt = html.escape(str(r.get("tittel", "")))
+            anb_txt = html.escape(str(r.get("anbefaling", "")))
+            kpi_txt = html.escape(str(r.get("mal_kpi", "")))
+            eff_txt = html.escape(str(r.get("effekt_beskrivelse", "")))
+            det_rows.append(
+                f"<tr>"
+                f"<td><strong>{kat_txt}</strong></td>"
+                f"<td><strong>{tit_txt}</strong><br/><span>{anb_txt}</span></td>"
+                f"<td>{kpi_txt}</td>"
+                f"<td><strong>{eff_txt}</strong></td>"
+                f"</tr>"
+            )
+        deterministic_section_html = f"""
+        <section aria-labelledby="det-profit-heading">
+          <h2 id="det-profit-heading">Deterministisk Lønnsomhetspotensial (Beregnet i Python)</h2>
+          <div class="table-wrapper">
+            <table class="data-table" aria-label="Deterministisk lønnsomhetspotensial">
+              <thead>
+                <tr>
+                  <th>Kategori</th>
+                  <th>Anbefalt Grep</th>
+                  <th>Mål-KPI</th>
+                  <th>Beregnet Effekt</th>
+                </tr>
+              </thead>
+              <tbody>
+                {''.join(det_rows)}
+              </tbody>
+            </table>
+          </div>
+        </section>
+        """
 
     # Faresignaler
     avvik_items = getattr(ai_report, "potensielle_avvik", []) or []
@@ -427,7 +480,7 @@ def generate_management_html(
     </section>
 
     <section aria-labelledby="kpi-heading">
-      <h2 id="kpi-heading">Nøkkeltall (Deterministisk beregnet etter NS 4102)</h2>
+      <h2 id="kpi-heading">Finansielle Nøkkeltall (Deterministisk beregnet etter NS 4102)</h2>
       <div class="kpi-grid">
         <div class="kpi-card">
           <div class="kpi-label">Driftsinntekter</div>
@@ -461,6 +514,22 @@ def generate_management_html(
           <div class="kpi-label">Likviditetsgrad 1</div>
           <div class="kpi-value">{likviditetsgrad_str}</div>
         </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Likviditetsgrad 2</div>
+          <div class="kpi-value">{likviditetsgrad_2_str}</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Egenkapitalandel</div>
+          <div class="kpi-value">{egenkapitalandel_str}</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Totalkapitalrent. (TKR)</div>
+          <div class="kpi-value">{tkr_str}</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Egenkapitalrent. (EKR)</div>
+          <div class="kpi-value">{ekr_str}</div>
+        </div>
       </div>
     </section>
 
@@ -479,20 +548,27 @@ def generate_management_html(
       <p class="section-text">{likviditet}</p>
     </section>
 
+    <section aria-labelledby="solvency-heading">
+      <h2 id="solvency-heading">3. Soliditet og Kapitalavkastning (TKR / EKR)</h2>
+      <p class="section-text">{soliditet_rentabilitet}</p>
+    </section>
+
     <section aria-labelledby="audit-heading">
-      <h2 id="audit-heading">3. Revisors Avstemmingsnotat (Internkontroll)</h2>
+      <h2 id="audit-heading">4. Revisors Avstemmingsnotat (Internkontroll)</h2>
       <p class="section-text">{revisor_notat}</p>
     </section>
 
+    {deterministic_section_html}
+
     <section aria-labelledby="risk-heading">
-      <h2 id="risk-heading">4. Identifiserte Faresignaler &amp; Avvik</h2>
+      <h2 id="risk-heading">5. Identifiserte Faresignaler &amp; Avvik</h2>
       <ul class="risk-list">
         {risk_list_html}
       </ul>
     </section>
 
     <section aria-labelledby="actions-heading">
-      <h2 id="actions-heading">5. Strategisk Tiltaksliste for Ledelsen</h2>
+      <h2 id="actions-heading">6. Strategisk Tiltaksliste for Ledelsen (KI-CFO)</h2>
       <div class="table-wrapper">
         <table class="data-table" aria-label="Strategisk tiltaksliste">
           <thead>
