@@ -21,13 +21,16 @@ def generate_management_pdf(
     ns4102_summary: dict = None,
     recon_result: dict = None,
     recommendations: Optional[List[Dict[str, Any]]] = None,
+    report_type: str = "styre",
 ) -> io.BytesIO:
     """
     TOP 10% TYPOGRAPHY PATTERN (v2.0 CFO-pakke):
-    Genererer en formell, profesjonell styrepakke (PDF) direkte in-memory.
+    Genererer en formell, profesjonell rapport (PDF) direkte in-memory.
+    Støtter report_type="styre" (Styrepakke) og report_type="ledelse" (Beslutningsrapport).
     Rendrer deterministisk nøkkeltallstabell (inkl. Soliditet, LG2, TKR og EKR),
     avstemmingsstatus/avvikstabell, deterministiske lønnsomhetsråd og dype CFO-analyser.
     """
+    profile = "ledelse" if str(report_type or "styre").strip().lower() in ("ledelse", "beslutningsrapport", "operativ") else "styre"
     buffer = io.BytesIO()
 
     doc = SimpleDocTemplate(
@@ -88,8 +91,12 @@ def generate_management_pdf(
     elements = []
 
     # 1. Header
-    elements.append(Paragraph(f"Styrepakke & Ledelsesrapport: {company_name}", title_style))
-    elements.append(Paragraph("Utarbeidet med KI-Revisor • Basert på NS 4102 Kontoplan og Kryssavstemt Hovedbok", subtitle_style))
+    if profile == "styre":
+        elements.append(Paragraph(f"Styrepakke (Strategisk): {company_name}", title_style))
+        elements.append(Paragraph("Utarbeidet med KI-Revisor • Fokus: Strategi, Governance, Soliditet og Risiko • NS 4102", subtitle_style))
+    else:
+        elements.append(Paragraph(f"Beslutningsrapport (Operativ): {company_name}", title_style))
+        elements.append(Paragraph("Utarbeidet med KI-CFO • Fokus: Operasjonell Drift, Kostnadskontroll og Likviditet • NS 4102", subtitle_style))
     elements.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#cbd5e1"), spaceBefore=2, spaceAfter=8))
 
     # 2. Hovedkonklusjon (Callout box med fargeindikator)

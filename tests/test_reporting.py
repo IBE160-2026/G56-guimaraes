@@ -286,4 +286,104 @@ class TestReportingAndExport:
         assert "Deterministisk Lønnsomhetspotensial" in html_str
         assert "50 000 NOK" in html_str
 
+    def test_html_report_profiles_styre_vs_ledelse_conditional_rendering(self):
+        """
+        Tester at generate_management_html skiller tydelig mellom report_type='styre' (Styrepakke)
+        og report_type='ledelse' (Beslutningsrapport) med riktig innholdsprofil, null eksterne
+        avhengigheter, full The AI Firewall-beskyttelse og støtte for @media print.
+        """
+        from compliance_engine import evaluate_ns4102_compliance, evaluate_vat_compliance
+        from ledger_analytics import (
+            build_ns4102_income_statement,
+            evaluate_profitability_indicators,
+            generate_profitability_recommendations,
+            summarize_cost_drivers,
+        )
+
+        sample_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../data/sample"))
+        sb = pd.read_csv(os.path.join(sample_dir, "saldobalanse_balansert.csv"))
+        hb = pd.read_csv(os.path.join(sample_dir, "hovedbok_balansert.csv"))
+        sb["NS4102_Kategori"] = sb["Konto"].apply(map_to_ns4102)
+
+        recon_res = reconcile_hb_with_sb(sb, hb)
+        vat_res = evaluate_vat_compliance(sb, hb)
+        ns_res = evaluate_ns4102_compliance(sb, hb)
+        metrics = calculate_detailed_financial_metrics(sb)
+        income_stmt = build_ns4102_income_statement(sb, hb, metrics)
+        prof_ind = evaluate_profitability_indicators(metrics)
+        drivers = summarize_cost_drivers(sb, hb)
+        recs = generate_profitability_recommendations(metrics, drivers)
+        report = generate_management_report(sb, recon_result=recon_res, mock_mode=True, hb_df=hb)
+
+        # 1. Generer Styrepakke (Strategisk)
+        styre_buf = generate_management_html(
+            company_name="ProfilTest AS",
+            ai_report=report,
+            metrics=metrics,
+            recon_result=recon_res,
+            recommendations=recs,
+            report_type="styre",
+            sb_df=sb,
+            vat_compliance=vat_res,
+            ns4102_compliance=ns_res,
+            income_statement=income_stmt,
+            cost_drivers=drivers,
+            profitability_indicators=prof_ind,
+            period_label="2026-01",
+        )
+        styre_html = styre_buf.getvalue().decode("utf-8")
+
+        assert 'data-report-type="styre"' in styre_html
+        assert 'id="styre-executive-summary"' in styre_html
+        assert 'id="styre-hovedtall"' in styre_html
+        assert 'id="styre-compliance"' in styre_html
+        assert 'id="styre-bransje-v2"' in styre_html
+        assert 'id="styre-strategiske-rad"' in styre_html
+        assert "Utbyttekapasitet" in styre_html
+        assert "Bransjeposisjonering" in styre_html
+        assert 'id="ledelse-resultatoppstilling"' not in styre_html
+        assert 'id="ledelse-operasjonell-v2"' not in styre_html
+        assert "@media print" in styre_html
+
+        # 2. Generer Beslutningsrapport (Operativ)
+        ledelse_buf = generate_management_html(
+            company_name="ProfilTest AS",
+            ai_report=report,
+            metrics=metrics,
+            recon_result=recon_res,
+            recommendations=recs,
+            report_type="ledelse",
+            sb_df=sb,
+            vat_compliance=vat_res,
+            ns4102_compliance=ns_res,
+            income_statement=income_stmt,
+            cost_drivers=drivers,
+            profitability_indicators=prof_ind,
+            period_label="2026-01",
+        )
+        ledelse_html = ledelse_buf.getvalue().decode("utf-8")
+
+        assert 'data-report-type="ledelse"' in ledelse_html
+        assert 'id="ledelse-operativ-oppsummering"' in ledelse_html
+        assert 'id="ledelse-resultatoppstilling"' in ledelse_html
+        assert 'id="ledelse-kostnadsdrivere"' in ledelse_html
+        assert 'id="ledelse-mva-og-avvik"' in ledelse_html
+        assert 'id="ledelse-operasjonell-v2"' in ledelse_html
+        assert 'id="ledelse-operative-rad"' in ledelse_html
+        assert "role='progressbar'" in ledelse_html or 'role="progressbar"' in ledelse_html
+        assert "Timelister" in ledelse_html
+        assert "Varelager" in ledelse_html
+        assert "CRM" in ledelse_html
+        assert 'id="styre-executive-summary"' not in ledelse_html
+        assert 'id="styre-bransje-v2"' not in ledelse_html
+
+        # 3. Sjekk at heller ikke Beslutningsrapporten lekker rå HB-transaksjonstekster
+        for raw_hb_text in ["Faktura 101", "Innbetaling kunde", "Varekjøp", "Lønnsutbetaling", "Bilagsnr"]:
+            assert raw_hb_text not in ledelse_html
+
+        # 4. Ugyldig report_type skal reise ValueError
+        with pytest.raises(ValueError, match="Ugyldig report_type"):
+            generate_management_html("ProfilTest AS", report, metrics, recon_res, recs, report_type="ukjent")
+
+
 

@@ -20,19 +20,25 @@ from ledger_analytics import (
 from llm_integration import generate_management_report
 from pdf_generator import generate_management_pdf
 from views.ai_advisor_and_export import render_ai_advisor_and_export
+from views.auditor_reconciliation import render_auditor_reconciliation
 from views.financial_analysis import render_financial_analysis
 from views.history_and_trends import render_history_and_trends
+from views.industry_benchmarking import render_industry_benchmarking_mockup
+from views.operational_analysis import render_operational_analysis
 from views.upload_and_control import render_upload_and_control
 
 
 class TestMultipageArchitectureAndEndToEnd:
     def test_multipage_views_and_orchestrator_compile_and_export_callables(self):
         """
-        Verifiserer at alle 4 flersides visningsmoduler i src/views/ og src/app.py
-        har gyldig syntaks og eksponerer forventede sidefunksjoner for st.navigation.
+        Verifiserer at alle 7 visningsmoduler i src/views/ og src/app.py
+        har gyldig syntaks, bruker st.sidebar.radio uten unsafe_allow_html, og eksponerer forventede funksjoner.
         """
         assert callable(render_upload_and_control)
+        assert callable(render_auditor_reconciliation)
         assert callable(render_financial_analysis)
+        assert callable(render_operational_analysis)
+        assert callable(render_industry_benchmarking_mockup)
         assert callable(render_ai_advisor_and_export)
         assert callable(render_history_and_trends)
 
@@ -43,7 +49,10 @@ class TestMultipageArchitectureAndEndToEnd:
             "src/database.py",
             "src/ledger_analytics.py",
             "src/views/upload_and_control.py",
+            "src/views/auditor_reconciliation.py",
             "src/views/financial_analysis.py",
+            "src/views/operational_analysis.py",
+            "src/views/industry_benchmarking.py",
             "src/views/ai_advisor_and_export.py",
             "src/views/history_and_trends.py",
         ]:
@@ -51,6 +60,48 @@ class TestMultipageArchitectureAndEndToEnd:
             with open(full_path, "r", encoding="utf-8") as f:
                 source = f.read()
             ast.parse(source, filename=rel_path)
+            assert "unsafe_allow_html" not in source
+
+        with open(os.path.join(repo_root, "src/app.py"), "r", encoding="utf-8") as f:
+            app_src = f.read()
+        assert "st.sidebar.radio" in app_src
+        assert "🔎 2. Revisors avstemming" in app_src
+        assert "⚙️ 4. Operasjonell analyse (v2.)" in app_src
+        assert "🏢 5. Bransjesammenligning (v2.)" in app_src
+        assert "💡 6. KI-Rådgiver & Eksport" in app_src
+        assert "🗄️ 7. Historikk & Trendanalyse" in app_src
+
+        with open(os.path.join(repo_root, "src/views/financial_analysis.py"), "r", encoding="utf-8") as f:
+            fin_src = f.read()
+        assert "📈 Resultatoppstilling etter NS 4102" in fin_src
+        assert "Kostnadsstruktur (% av Driftsinntekter)" in fin_src
+        assert "Lønnsomhetsindikatorer" in fin_src
+        assert "st.progress" in fin_src
+        assert "🔍 Analyse av EBIT-drivere" in fin_src
+        assert "1 % økning i pris" in fin_src
+        assert "1 % reduksjon i varekostnad" in fin_src
+        assert "1 % reduksjon i faste kostnader (Opex)" in fin_src
+
+        with open(os.path.join(repo_root, "src/views/industry_benchmarking.py"), "r", encoding="utf-8") as f:
+            ind_src = f.read()
+        assert "62.010 Programmeringstjenester" in ind_src
+        assert "Driftsinntekter vs Bransjesnitt" in ind_src
+        assert "Opex vs Bransjesnitt" in ind_src
+        assert "EBIT-margin vs Bransjesnitt" in ind_src
+        assert "📍 Simulert posisjon: Selskapet ligger i 3. kvartil (Topp 25 %) med en margin på 12 %, mot et bransjesnitt på 6 %." in ind_src
+        assert "Bruttomargin vs. Bransje" in ind_src
+        assert "Lønnskostnad/Omsetning vs. Bransje" in ind_src
+        assert "Opex/Omsetning vs. Bransje" in ind_src
+        assert "🚀 Strategiske tiltak for å øke bransjescore (Kommer i v2)" in ind_src
+        assert "Generer bransjetiltak med KI" in ind_src
+
+        with open(os.path.join(repo_root, "src/views/ai_advisor_and_export.py"), "r", encoding="utf-8") as f:
+            exp_src = f.read()
+        assert "st.checkbox" in exp_src
+        assert "Generer Styrepakke (Strategisk)" in exp_src
+        assert "Generer Beslutningsrapport (Operativ)" in exp_src
+        assert 'report_type="styre"' in exp_src
+        assert 'report_type="ledelse"' in exp_src
 
     def test_end_to_end_v2_pipeline_green_and_red_paths_with_sqlite_history(self, tmp_path):
         """

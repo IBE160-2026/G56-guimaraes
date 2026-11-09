@@ -353,3 +353,452 @@ def generate_profitability_recommendations(
         )
 
     return recs
+
+
+def build_ns4102_income_statement(
+    sb_df: pd.DataFrame,
+    hb_df: Optional[pd.DataFrame] = None,
+    metrics: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """
+    DETERMINISTISK RESULTATOPPSTILLING ETTER NS 4102 (The AI Firewall):
+    Bygger en hierarkisk resultatoppstilling (Income Statement) med hovedlinjer,
+    underliggende kontospesifikasjoner fra Saldobalanse/Hovedbok, beløp i NOK og % av driftsinntekter.
+    """
+    from compliance_engine import calculate_detailed_financial_metrics
+
+    m = metrics if metrics is not None else calculate_detailed_financial_metrics(sb_df)
+
+    inntekter = float(m.get("driftsinntekter", 0.0))
+    varekostnad = float(m.get("varekostnad", 0.0))
+    bruttofortjeneste = float(m.get("bruttofortjeneste", inntekter - varekostnad))
+    bruttomargin = float(m.get("bruttomargin", round((bruttofortjeneste / inntekter * 100), 2) if inntekter > 0 else 0.0))
+    lonnskostnad = float(m.get("lonnskostnad", 0.0))
+    andre_driftskostnader = float(m.get("andre_driftskostnader", 0.0))
+    samlede_driftskostnader = float(
+        m.get("samlede_driftskostnader", varekostnad + lonnskostnad + andre_driftskostnader)
+    )
+    ebit = float(m.get("ebit", inntekter - samlede_driftskostnader))
+    driftsmargin = float(m.get("driftsmargin", round((ebit / inntekter * 100), 2) if inntekter > 0 else 0.0))
+
+    varekost_pct = round((varekostnad / inntekter * 100), 1) if inntekter > 0 else 0.0
+    lonn_pct = round((lonnskostnad / inntekter * 100), 1) if inntekter > 0 else 0.0
+    opex_pct = round((andre_driftskostnader / inntekter * 100), 1) if inntekter > 0 else 0.0
+    sum_kost_pct = round((samlede_driftskostnader / inntekter * 100), 1) if inntekter > 0 else 0.0
+    inntekt_pct = 100.0 if inntekter > 0 else 0.0
+
+    df = sb_df.copy() if sb_df is not None else pd.DataFrame()
+    if not df.empty and "Konto" in df.columns:
+        df["Konto_str"] = df["Konto"].astype(str).str.split(".").str[0].str.strip()
+        df["Debet_num"] = pd.to_numeric(df.get("Debet", 0.0), errors="coerce").fillna(0.0)
+        df["Kredit_num"] = pd.to_numeric(df.get("Kredit", 0.0), errors="coerce").fillna(0.0)
+    else:
+        df["Konto_str"] = pd.Series(dtype=str)
+        df["Debet_num"] = pd.Series(dtype=float)
+        df["Kredit_num"] = pd.Series(dtype=float)
+
+    hb_desc_map: Dict[str, str] = {}
+    if hb_df is not None and not hb_df.empty and "Konto" in hb_df.columns and "Beskrivelse" in hb_df.columns:
+        hb_temp = hb_df.copy()
+        hb_temp["Konto_str"] = hb_temp["Konto"].astype(str).str.split(".").str[0].str.strip()
+        for acc_no, grp in hb_temp.groupby("Konto_str"):
+            descs = [str(x).strip() for x in grp["Beskrivelse"].dropna().tolist() if str(x).strip()]
+            if descs:
+                hb_desc_map[str(acc_no)] = descs[0]
+
+    def _extract_sub_accounts(prefixes: tuple[str, ...], is_revenue: bool, default_spec: str) -> List[Dict[str, Any]]:
+        if df.empty:
+            return []
+        sub_df = df[df["Konto_str"].str.startswith(prefixes)].copy()
+        if sub_df.empty:
+            return []
+        sub_df = sub_df.sort_values(by="Konto_str")
+        items: List[Dict[str, Any]] = []
+        for _, row in sub_df.iterrows():
+            acc = str(row["Konto_str"])
+            name = str(row.get("Kontonavn", f"Konto {acc}")).strip() or f"Konto {acc}"
+            if is_revenue:
+                raw_amt = float(row["Kredit_num"])
+                signed_amt = raw_amt
+                spec = "Kreditsaldo i SB"
+            else:
+                raw_amt = float(row["Debet_num"])
+                signed_amt = -raw_amt
+                spec = hb_desc_map.get(acc, default_spec)
+            pct = round((raw_amt / inntekter * 100), 1) if inntekter > 0 else 0.0
+            items.append(
+                {
+                    "regnskapspost": f"• Konto {acc}: {name}",
+                    "kontospesifikasjon": spec,
+                    "belop_nok": signed_amt,
+                    "andel_pct": pct,
+                    "row_type": "sub_income" if is_revenue else "sub_cost",
+                }
+            )
+        return items
+
+    acc_3 = _extract_sub_accounts(("3",), is_revenue=True, default_spec="Kreditsaldo i SB")
+    acc_4 = _extract_sub_accounts(("4",), is_revenue=False, default_spec="Varekjøp")
+    acc_5 = _extract_sub_accounts(("5",), is_revenue=False, default_spec="Lønn til ansatte")
+    acc_67 = _extract_sub_accounts(("6", "7"), is_revenue=False, default_spec="Driftskostnad")
+
+    rows: List[Dict[str, Any]] = [
+        {
+            "regnskapspost": "1. Salgs- og driftsinntekter",
+            "kontospesifikasjon": "Klasse 3 (Konto 3000-3999)",
+            "belop_nok": inntekter,
+            "andel_pct": inntekt_pct,
+            "row_type": "main_income",
+        },
+        *acc_3,
+        {
+            "regnskapspost": "2. Varekostnad",
+            "kontospesifikasjon": "Klasse 4 (Konto 4000-4999)",
+            "belop_nok": -varekostnad,
+            "andel_pct": varekost_pct,
+            "row_type": "main_cost_1",
+        },
+        *acc_4,
+        {
+            "regnskapspost": "Bruttofortjeneste (Gross Profit)",
+            "kontospesifikasjon": "Driftsinntekter - Varekostnad",
+            "belop_nok": bruttofortjeneste,
+            "andel_pct": round(bruttomargin, 1),
+            "row_type": "subtotal_gross",
+        },
+        {
+            "regnskapspost": "3. Lønnskostnader & personalkostnader",
+            "kontospesifikasjon": "Klasse 5 (Konto 5000-5999)",
+            "belop_nok": -lonnskostnad,
+            "andel_pct": lonn_pct,
+            "row_type": "main_cost_2",
+        },
+        *acc_5,
+        {
+            "regnskapspost": "4. Andre driftskostnader",
+            "kontospesifikasjon": "Klasse 6 & 7 (Husleie, honorarer)",
+            "belop_nok": -andre_driftskostnader,
+            "andel_pct": opex_pct,
+            "row_type": "main_cost_3",
+        },
+        *acc_67,
+        {
+            "regnskapspost": "Sum driftskostnader",
+            "kontospesifikasjon": "Post 2 + 3 + 4",
+            "belop_nok": -samlede_driftskostnader,
+            "andel_pct": sum_kost_pct,
+            "row_type": "subtotal_opex",
+        },
+        {
+            "regnskapspost": "Driftsresultat (EBIT)",
+            "kontospesifikasjon": "Driftsinntekter - Sum driftskostnader",
+            "belop_nok": ebit,
+            "andel_pct": round(driftsmargin, 1),
+            "row_type": "result_ebit",
+        },
+    ]
+
+    stmt_df = pd.DataFrame(rows).rename(
+        columns={
+            "regnskapspost": "Regnskapspost (NS 4102)",
+            "kontospesifikasjon": "Kontospesifikasjon",
+            "belop_nok": "Beløp (NOK)",
+            "andel_pct": "% av Inntekt",
+        }
+    )
+
+    return {
+        "rows": rows,
+        "dataframe": stmt_df,
+        "driftsmargin": round(driftsmargin, 1),
+    }
+
+
+def evaluate_profitability_indicators(metrics: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    DETERMINISTISK VURDERING AV LØNNSOMHETSINDIKATORER OG KOSTNADSSTRUKTUR (The AI Firewall):
+    Beregner ferdige prosenter, fremdriftsverdier (0.0–1.0 for st.progress) og diagnostiske
+    hjelpetekster for CFO-kortene under Resultatoppstillingen.
+    """
+    inntekter = float(metrics.get("driftsinntekter", 0.0))
+    varekostnad = float(metrics.get("varekostnad", 0.0))
+    lonnskostnad = float(metrics.get("lonnskostnad", 0.0))
+    andre_opex = float(metrics.get("andre_driftskostnader", 0.0))
+    ebit = float(metrics.get("ebit", 0.0))
+
+    bruttomargin = round(float(metrics.get("bruttomargin", 0.0)), 1)
+    driftsmargin = round(float(metrics.get("driftsmargin", 0.0)), 1)
+    varekost_pct = round((varekostnad / inntekter * 100), 1) if inntekter > 0 else 0.0
+    lonn_pct = round(float(metrics.get("lonnsandel", (lonnskostnad / inntekter * 100) if inntekter > 0 else 0.0)), 1)
+    opex_pct = round(float(metrics.get("opex_andel", (andre_opex / inntekter * 100) if inntekter > 0 else 0.0)), 1)
+
+    if bruttomargin >= 50.0:
+        brutto_note = "God prisingsmakt"
+    elif bruttomargin >= 30.0:
+        brutto_note = "Moderat bruttomargin"
+    else:
+        brutto_note = "Presset bruttomargin"
+
+    if driftsmargin >= 20.0:
+        ebit_note = "Solid overskudd"
+    elif driftsmargin >= 10.0:
+        ebit_note = "Sunn drift"
+    elif driftsmargin >= 0.0:
+        ebit_note = "Positiv drift"
+    else:
+        ebit_note = "Driftsunderskudd"
+
+    if lonn_pct <= 25.0:
+        lonn_note = "Under 25 % måltall"
+    elif lonn_pct <= 45.0:
+        lonn_note = "Normalt kostnadsnivå"
+    else:
+        lonn_note = "Høy lønnsintensitet"
+
+    if opex_pct <= 15.0:
+        opex_note = "Lav fastkostnadsbase"
+    elif opex_pct <= 25.0:
+        opex_note = "Moderat fastkostnadsbase"
+    else:
+        opex_note = "Høy fastkostnadsbase"
+
+    if driftsmargin >= 20.0:
+        summary_level = "success"
+        summary_text = (
+            f"Med en EBIT-margin på **{driftsmargin:.1f} %** er selskapet i øverste kvartil "
+            "blant norske SMB-virksomheter."
+        )
+    elif driftsmargin >= 10.0:
+        summary_level = "info"
+        summary_text = (
+            f"Med en EBIT-margin på **{driftsmargin:.1f} %** leverer selskapet god lønnsomhet "
+            "over bransjesnittet for norske SMB-virksomheter."
+        )
+    elif driftsmargin >= 0.0:
+        summary_level = "info"
+        summary_text = (
+            f"Med en EBIT-margin på **{driftsmargin:.1f} %** går driften i pluss, men økt "
+            "kostnadskontroll anbefales for å styrke resultatbufferen."
+        )
+    else:
+        summary_level = "info"
+        summary_text = (
+            f"Med en EBIT-margin på **{driftsmargin:.1f} %** er driftsresultatet negativt. "
+            "Tiltak på varekostnad og faste kostnader bør prioriteres."
+        )
+
+    def _clamp_progress(pct: float) -> float:
+        return float(min(max(pct / 100.0, 0.0), 1.0))
+
+    return {
+        "cost_bars": [
+            {
+                "key": "varekostnad",
+                "label": f"Varekostnad ({varekostnad:,.0f} NOK)".replace(",", " "),
+                "belop_nok": varekostnad,
+                "pct": varekost_pct,
+                "progress": _clamp_progress(varekost_pct),
+                "is_highlight": False,
+            },
+            {
+                "key": "lonnskostnader",
+                "label": f"Lønnskostnader ({lonnskostnad:,.0f} NOK)".replace(",", " "),
+                "belop_nok": lonnskostnad,
+                "pct": lonn_pct,
+                "progress": _clamp_progress(lonn_pct),
+                "is_highlight": False,
+            },
+            {
+                "key": "andre_driftskostnader",
+                "label": f"Andre driftskostnader ({andre_opex:,.0f} NOK)".replace(",", " "),
+                "belop_nok": andre_opex,
+                "pct": opex_pct,
+                "progress": _clamp_progress(opex_pct),
+                "is_highlight": False,
+            },
+            {
+                "key": "ebit",
+                "label": f"Gjenværende Driftsresultat / EBIT ({ebit:,.0f} NOK)".replace(",", " "),
+                "belop_nok": ebit,
+                "pct": driftsmargin,
+                "progress": _clamp_progress(driftsmargin),
+                "is_highlight": True,
+            },
+        ],
+        "kpis": {
+            "bruttomargin": {"title": "Bruttomargin", "pct": bruttomargin, "note": brutto_note, "highlight": False},
+            "driftsmargin": {"title": "Driftsmargin (EBIT)", "pct": driftsmargin, "note": ebit_note, "highlight": True},
+            "lonn_omsetning": {"title": "Lønn / Omsetning", "pct": lonn_pct, "note": lonn_note, "highlight": False},
+            "opex_omsetning": {"title": "Opex / Omsetning", "pct": opex_pct, "note": opex_note, "highlight": False},
+        },
+        "summary_level": summary_level,
+        "summary_text": summary_text,
+    }
+
+
+def calculate_ebit_driver_sensitivity(metrics: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    DETERMINISTISK EBIT-DRIVER OG SENSITIVITETSANALYSE (The AI Firewall):
+    Beregner eksakt kroneeffekt på bunnlinjen (EBIT) ved 1 % marginal forbedring i:
+      1. Pris (Driftsinntekter +1 % ved uendret volum)
+      2. Varekostnad (Konto 4xxx -1 %)
+      3. Faste kostnader / Opex (Konto 5xxx–7xxx -1 %, eller 6xxx–7xxx dersom spesifisert)
+    Returnerer ferdigkalkulerte beløp i NOK, ny EBIT-margin og en dynamisk, deterministisk innsiktstekst.
+    """
+    inntekter = float(metrics.get("driftsinntekter", 0.0))
+    varekostnad = float(metrics.get("varekostnad", 0.0))
+    lonnskostnad = float(metrics.get("lonnskostnad", 0.0))
+    andre_opex = float(metrics.get("andre_driftskostnader", 0.0))
+    ebit = float(metrics.get("ebit", 0.0))
+    bruttomargin = round(float(metrics.get("bruttomargin", 0.0)), 1)
+    driftsmargin = round(float(metrics.get("driftsmargin", 0.0)), 2)
+
+    # Faste kostnader (Opex): Bruker andre_driftskostnader + lonnskostnad (samlede faste driftskostnader kl. 5-7)
+    # slik at analysen alltid reflekterer selskapets faktiske fastkostnadsbase.
+    faste_kostnader_base = lonnskostnad + andre_opex
+
+    price_1pct_nok = round(inntekter * 0.01, 2)
+    cogs_1pct_nok = round(varekostnad * 0.01, 2)
+    opex_1pct_nok = round(faste_kostnader_base * 0.01, 2)
+    lonn_1pct_nok = round(lonnskostnad * 0.01, 2)
+    other_opex_1pct_nok = round(andre_opex * 0.01, 2)
+
+    new_Revenue_price = inntekter * 1.01
+    new_margin_price = round(((ebit + price_1pct_nok) / new_Revenue_price) * 100.0, 2) if new_Revenue_price > 0 else 0.0
+    new_margin_cogs = round(((ebit + cogs_1pct_nok) / inntekter) * 100.0, 2) if inntekter > 0 else 0.0
+    new_margin_opex = round(((ebit + opex_1pct_nok) / inntekter) * 100.0, 2) if inntekter > 0 else 0.0
+
+    price_vs_opex_mult = round(price_1pct_nok / opex_1pct_nok, 1) if opex_1pct_nok > 0 else 0.0
+    price_vs_cogs_mult = round(price_1pct_nok / cogs_1pct_nok, 1) if cogs_1pct_nok > 0 else 0.0
+
+    if price_vs_opex_mult > 0 and price_vs_cogs_mult > 0:
+        insight_text = (
+            f"💡 **Operasjonell giring (CFO-innsikt):** For dette selskapet vil en prisøkning på **1 %** "
+            f"(**+{price_1pct_nok:,.0f} NOK** rett på bunnlinjen) gi **{price_vs_opex_mult:.1f}x** større effekt på EBIT "
+            f"enn et tilsvarende kutt på 1 % i faste kostnader (**+{opex_1pct_nok:,.0f} NOK**), og "
+            f"**{price_vs_cogs_mult:.1f}x** større effekt enn 1 % reduksjon i varekostnad (**+{cogs_1pct_nok:,.0f} NOK**), "
+            f"på grunn av den nåværende bruttomarginen på **{bruttomargin:.1f} %**."
+        ).replace(",", " ")
+    elif price_1pct_nok > 0:
+        insight_text = (
+            f"💡 **Operasjonell giring (CFO-innsikt):** En prisøkning på **1 %** øker EBIT direkte med "
+            f"**+{price_1pct_nok:,.0f} NOK** ved uendret salgsvolum.".replace(",", " ")
+        )
+    else:
+        insight_text = "💡 **Operasjonell giring:** Ingen driftsinntekter registrert i perioden for sensitivitetsberegning."
+
+    return {
+        "driftsinntekter": inntekter,
+        "varekostnad": varekostnad,
+        "faste_kostnader_base": faste_kostnader_base,
+        "lonnskostnad": lonnskostnad,
+        "andre_driftskostnader": andre_opex,
+        "ebit": ebit,
+        "driftsmargin": driftsmargin,
+        "bruttomargin": bruttomargin,
+        "price_1pct_nok": price_1pct_nok,
+        "cogs_1pct_nok": cogs_1pct_nok,
+        "opex_1pct_nok": opex_1pct_nok,
+        "lonn_1pct_nok": lonn_1pct_nok,
+        "other_opex_1pct_nok": other_opex_1pct_nok,
+        "new_margin_price": new_margin_price,
+        "new_margin_cogs": new_margin_cogs,
+        "new_margin_opex": new_margin_opex,
+        "price_vs_opex_mult": price_vs_opex_mult,
+        "price_vs_cogs_mult": price_vs_cogs_mult,
+        "insight_text": insight_text,
+    }
+
+
+def calculate_nace_driver_benchmarking(revenue_nok: float = 1_200_000.0) -> Dict[str, Any]:
+    """
+    DETERMINISTISK NACE DRIVER-BENCHMARKING & GAP-IDENTIFIKATOR (v2.0 Teaser):
+    Sammenligner selskapets EBIT-drivere mot bransjesnittet (NACE 62.010), beregner
+    differansen (gapet i prosentpoeng) med Pandas, og identifiserer algoritmisk
+    driveren med størst ugunstig avvik og tilhørende EBIT-potensial i NOK.
+    """
+    # Konsistente bransje- og selskapstall:
+    # Selskap: Bruttomargin 63,5 % (Varekostnad 36,5 %) - Lønn 34,0 % - Opex 17,5 % = 12,0 % EBIT-margin
+    # Bransje: Bruttomargin 68,0 % (Varekostnad 32,0 %) - Lønn 42,5 % - Opex 19,5 % =  6,0 % EBIT-margin
+    driver_rows = [
+        {
+            "key": "bruttomargin",
+            "driver_label": "Bruttomargin vs. Bransje",
+            "underlying_cost_label": "varekostnad",
+            "company_pct": 63.5,
+            "industry_pct": 68.0,
+            "higher_is_better": True,
+        },
+        {
+            "key": "lonn_omsetning",
+            "driver_label": "Lønnskostnad/Omsetning vs. Bransje",
+            "underlying_cost_label": "lønnskostnad",
+            "company_pct": 34.0,
+            "industry_pct": 42.5,
+            "higher_is_better": False,
+        },
+        {
+            "key": "opex_omsetning",
+            "driver_label": "Opex/Omsetning vs. Bransje",
+            "underlying_cost_label": "faste driftskostnader (Opex)",
+            "company_pct": 17.5,
+            "industry_pct": 19.5,
+            "higher_is_better": False,
+        },
+    ]
+
+    df = pd.DataFrame(driver_rows)
+    df["diff_pp"] = (df["company_pct"] - df["industry_pct"]).round(1)
+
+    # Ugunstig avvik i prosentpoeng (> 0 betyr at selskapet presterer svakere enn bransjesnittet)
+    def _calc_unfavorable_gap(row: pd.Series) -> float:
+        if bool(row["higher_is_better"]):
+            return round(max(0.0, float(row["industry_pct"]) - float(row["company_pct"])), 1)
+        return round(max(0.0, float(row["company_pct"]) - float(row["industry_pct"])), 1)
+
+    df["unfavorable_gap_pp"] = df.apply(_calc_unfavorable_gap, axis=1)
+    df["ebit_potential_nok"] = (revenue_nok * (df["unfavorable_gap_pp"] / 100.0)).round(0)
+
+    # Identifiser driveren med størst ugunstig avvik
+    worst_idx = int(df["unfavorable_gap_pp"].idxmax())
+    worst_row = df.loc[worst_idx]
+    gap_pp = float(worst_row["unfavorable_gap_pp"])
+    potential_nok = float(worst_row["ebit_potential_nok"])
+    cost_name = str(worst_row["underlying_cost_label"])
+
+    gap_str = f"{gap_pp:.1f}".replace(".", ",")
+    pot_str = f"{potential_nok:,.0f}".replace(",", " ")
+
+    potential_banner_text = (
+        f"🎯 Største forbedringspotensial: Din {cost_name} er {gap_str} prosentpoeng høyere enn "
+        f"bransjesnittet. Ved å lukke dette gapet vil EBIT øke med {pot_str} NOK."
+    )
+
+    display_df = pd.DataFrame(
+        {
+            "EBIT-driver": df["driver_label"],
+            "Selskap (%)": df["company_pct"].apply(lambda v: f"{v:.1f} %".replace(".", ",")),
+            "Bransjesnitt NACE (%)": df["industry_pct"].apply(lambda v: f"{v:.1f} %".replace(".", ",")),
+            "Avvik (prosentpoeng)": df["diff_pp"].apply(
+                lambda v: f"{v:+.1f} %-poeng".replace(".", ",")
+            ),
+            "Ugunstig gap": df["unfavorable_gap_pp"].apply(
+                lambda v: f"{v:.1f} %-poeng".replace(".", ",") if v > 0 else "0,0 %-poeng (Bedre enn snitt)"
+            ),
+            "EBIT-potensial (NOK)": df["ebit_potential_nok"].apply(
+                lambda v: f"+{v:,.0f} NOK".replace(",", " ") if v > 0 else "—"
+            ),
+        }
+    )
+
+    return {
+        "revenue_nok": revenue_nok,
+        "drivers_df": df,
+        "display_df": display_df,
+        "largest_gap_driver": str(worst_row["driver_label"]),
+        "largest_gap_cost_label": cost_name,
+        "largest_gap_pp": gap_pp,
+        "largest_gap_ebit_nok": potential_nok,
+        "potential_banner_text": potential_banner_text,
+    }
+

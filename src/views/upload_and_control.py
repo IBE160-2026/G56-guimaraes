@@ -194,7 +194,7 @@ def render_upload_and_control() -> None:
         st.caption(
             f"🗄️ **SQLite Auto-Sync:** Analysen er synkronisert til lokal database som **Kjøring #{run_id}** "
             f"(Periode: `{ws.get('period_label', 'Ukjent')}`, Selskap: `{ws.get('company_name', '')}`). "
-            "Bruk menyen til venstre for å gå videre til **2. Finansiell Analyse & HB** eller **3. KI-Rådgiver & Eksport**."
+            "Bruk menyen til venstre for å gå videre til **🔎 2. Revisors avstemming**, **📊 3. Finansiell Analyse & HB** eller **💡 6. KI-Rådgiver & Eksport**."
         )
 
     sb_mapped = ws.get("sb_mapped")

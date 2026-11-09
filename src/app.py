@@ -1,6 +1,6 @@
 """
 Hovedapplikasjon for G56 – Ledelsesrapport, Finansanalyse & Regnskapskontroll med KI (v2.0).
-Orkestrerer flersides navigasjon (st.navigation), felles sidepanel og automatisk SQLite-synkronisering.
+Orkestrerer sidepanel-navigasjon (st.sidebar.radio), modulære visninger og automatisk SQLite-synkronisering.
 """
 
 import io
@@ -11,6 +11,8 @@ import streamlit as st
 from app_logging import setup_app_logging
 from compliance_engine import (
     calculate_detailed_financial_metrics,
+    evaluate_ns4102_compliance,
+    evaluate_vat_compliance,
     map_to_ns4102,
     reconcile_hb_with_sb,
     validate_balance,
@@ -18,14 +20,20 @@ from compliance_engine import (
 from data_pipeline import process_csv_in_memory, validate_input
 from database import DatabaseManager
 from ledger_analytics import (
+    build_ns4102_income_statement,
+    calculate_ebit_driver_sensitivity,
+    evaluate_profitability_indicators,
     extract_period_label,
     generate_profitability_recommendations,
     summarize_cost_drivers,
 )
 from llm_integration import ManagementCommentary
 from views.ai_advisor_and_export import render_ai_advisor_and_export
+from views.auditor_reconciliation import render_auditor_reconciliation
 from views.financial_analysis import render_financial_analysis
 from views.history_and_trends import render_history_and_trends
+from views.industry_benchmarking import render_industry_benchmarking_mockup
+from views.operational_analysis import render_operational_analysis
 from views.upload_and_control import render_upload_and_control
 
 logger = setup_app_logging()
@@ -92,15 +100,25 @@ def reset_to_sample_data() -> None:
 st.session_state["cb_activate_semicolon"] = activate_semicolon_demo
 st.session_state["cb_reset_sample"] = reset_to_sample_data
 
-# Definer flersides navigasjon (plasseres øverst i sidepanelet av Streamlit)
-pg = st.navigation([
-    st.Page(render_upload_and_control, title="1. Opplasting & Kontroll", icon="📂", url_path="kontroll", default=True),
-    st.Page(render_financial_analysis, title="2. Finansiell Analyse & HB", icon="📊", url_path="analyse"),
-    st.Page(render_ai_advisor_and_export, title="3. KI-Rådgiver & Eksport", icon="💡", url_path="radgiver"),
-    st.Page(render_history_and_trends, title="4. Historikk & Trendanalyse", icon="🗄️", url_path="historikk"),
-])
+NAV_OPTIONS = [
+    "📂 1. Opplasting & Kontroll",
+    "🔎 2. Revisors avstemming",
+    "📊 3. Finansiell Analyse & HB",
+    "⚙️ 4. Operasjonell analyse (v2.)",
+    "🏢 5. Bransjesammenligning (v2.)",
+    "💡 6. KI-Rådgiver & Eksport",
+    "🗄️ 7. Historikk & Trendanalyse",
+]
+
+selected_step = st.sidebar.radio(
+    "Navigasjon:",
+    NAV_OPTIONS,
+    index=0,
+    key="sidebar_nav_radio",
+)
 
 with st.sidebar:
+    st.markdown("---")
     st.header("⚙️ Konfigurasjon & Sensormodus")
     company_name = st.text_input("Selskapsnavn:", value="Bedrift AS")
     demo_mode = st.radio(
@@ -170,6 +188,9 @@ else:
     if "persisted_custom_hb" in st.session_state:
         hb_source_name, hb_df = st.session_state["persisted_custom_hb"]
 
+st.session_state["sb_df"] = sb_df
+st.session_state["hb_df"] = hb_df
+
 workspace = {
     "company_name": company_name,
     "use_mock_ai": use_mock_ai,
@@ -185,12 +206,20 @@ workspace = {
     "hb_error": None,
     "recon_result": None,
     "recon_error": None,
+    "vat_compliance": None,
+    "ns4102_compliance": None,
     "sb_mapped": None,
     "metrics": None,
+    "income_statement": None,
+    "profitability_indicators": None,
     "cost_drivers": [],
     "recommendations": [],
     "period_label": None,
     "run_id": None,
+    "export_profiles": {
+        "styre": "Generer Styrepakke (Strategisk)",
+        "ledelse": "Generer Beslutningsrapport (Operativ)",
+    },
 }
 
 if sb_df is not None and hb_df is not None:
@@ -211,6 +240,9 @@ if sb_df is not None and hb_df is not None:
     except Exception as e:
         workspace["recon_error"] = str(e)
 
+    workspace["vat_compliance"] = evaluate_vat_compliance(sb_df, hb_df)
+    workspace["ns4102_compliance"] = evaluate_ns4102_compliance(sb_df, hb_df)
+
     sb_mapped = sb_df.copy()
     if "Konto" in sb_mapped.columns:
         sb_mapped["NS4102_Kategori"] = sb_mapped["Konto"].apply(map_to_ns4102)
@@ -218,11 +250,17 @@ if sb_df is not None and hb_df is not None:
 
     if workspace["sb_ok"] and workspace["hb_ok"] and workspace["recon_result"] is not None:
         metrics = calculate_detailed_financial_metrics(sb_mapped)
+        income_statement = build_ns4102_income_statement(sb_mapped, hb_df, metrics)
+        profitability_indicators = evaluate_profitability_indicators(metrics)
+        ebit_driver_sensitivity = calculate_ebit_driver_sensitivity(metrics)
         cost_drivers = summarize_cost_drivers(sb_mapped, hb_df)
         recommendations = generate_profitability_recommendations(metrics, cost_drivers)
         period_label = extract_period_label(hb_df)
 
         workspace["metrics"] = metrics
+        workspace["income_statement"] = income_statement
+        workspace["profitability_indicators"] = profitability_indicators
+        workspace["ebit_driver_sensitivity"] = ebit_driver_sensitivity
         workspace["cost_drivers"] = cost_drivers
         workspace["recommendations"] = recommendations
         workspace["period_label"] = period_label
@@ -265,4 +303,17 @@ with st.sidebar:
         "**The AI Firewall:** Koden regner deterministisk i Python/SQLite, KI forklarer via Pydantic Structured Outputs."
     )
 
-pg.run()
+if selected_step == "📂 1. Opplasting & Kontroll":
+    render_upload_and_control()
+elif selected_step == "🔎 2. Revisors avstemming":
+    render_auditor_reconciliation()
+elif selected_step == "📊 3. Finansiell Analyse & HB":
+    render_financial_analysis()
+elif selected_step == "⚙️ 4. Operasjonell analyse (v2.)":
+    render_operational_analysis()
+elif selected_step == "🏢 5. Bransjesammenligning (v2.)":
+    render_industry_benchmarking_mockup()
+elif selected_step == "💡 6. KI-Rådgiver & Eksport":
+    render_ai_advisor_and_export()
+elif selected_step == "🗄️ 7. Historikk & Trendanalyse":
+    render_history_and_trends()

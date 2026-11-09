@@ -12,7 +12,7 @@ from pdf_generator import generate_management_pdf
 
 def render_history_and_trends() -> None:
     db = st.session_state.get("db_manager")
-    st.title("🗄️ 4. Historikk & Trendanalyse (SQLite)")
+    st.title("🗄️ 7. Historikk & Trendanalyse (SQLite)")
     st.markdown(
         "Sammenlign lagrede regnskapsanalyser på tvers av perioder og sesjoner, inspiser historiske "
         "saldobalanser, hovedbøker og KI-rapporter, eller eksporter tidligere styrepakker."
@@ -156,16 +156,44 @@ def render_history_and_trends() -> None:
                     ns4102_summary=details["metrics"],
                     recon_result=hist_recon,
                     recommendations=details["recommendations"],
+                    report_type="styre",
                 )
-                html_buf = generate_management_html(
+                html_styre_buf = generate_management_html(
                     company_name=hist_company,
                     ai_report=hist_report,
                     metrics=details["metrics"],
                     recon_result=hist_recon,
                     recommendations=details["recommendations"],
+                    report_type="styre",
                 )
-                dl1, dl2 = st.columns(2)
+                html_ledelse_buf = generate_management_html(
+                    company_name=hist_company,
+                    ai_report=hist_report,
+                    metrics=details["metrics"],
+                    recon_result=hist_recon,
+                    recommendations=details["recommendations"],
+                    report_type="ledelse",
+                )
+                dl1, dl2, dl3 = st.columns(3)
                 with dl1:
+                    st.download_button(
+                        f"📥 Last ned Styrepakke HTML (#{selected_run_id})",
+                        data=html_styre_buf,
+                        file_name=f"Styrepakke_Run_{selected_run_id}.html",
+                        mime="text/html",
+                        use_container_width=True,
+                        key=f"hist_html_styre_{selected_run_id}",
+                    )
+                with dl2:
+                    st.download_button(
+                        f"📥 Last ned Beslutningsrapport HTML (#{selected_run_id})",
+                        data=html_ledelse_buf,
+                        file_name=f"Beslutningsrapport_Run_{selected_run_id}.html",
+                        mime="text/html",
+                        use_container_width=True,
+                        key=f"hist_html_ledelse_{selected_run_id}",
+                    )
+                with dl3:
                     st.download_button(
                         f"📥 Last ned PDF (Kjøring #{selected_run_id})",
                         data=pdf_buf,
@@ -173,13 +201,4 @@ def render_history_and_trends() -> None:
                         mime="application/pdf",
                         use_container_width=True,
                         key=f"hist_pdf_{selected_run_id}",
-                    )
-                with dl2:
-                    st.download_button(
-                        f"📥 Last ned HTML (Kjøring #{selected_run_id})",
-                        data=html_buf,
-                        file_name=f"Styrepakke_Run_{selected_run_id}.html",
-                        mime="text/html",
-                        use_container_width=True,
-                        key=f"hist_html_{selected_run_id}",
                     )

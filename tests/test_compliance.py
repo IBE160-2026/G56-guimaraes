@@ -182,3 +182,74 @@ class TestComplianceEngine:
         assert m["egenkapitalandel"] == 0.0
         assert m["totalkapitalrentabilitet"] == 0.0
         assert m["egenkapitalrentabilitet"] == 0.0
+
+    def test_evaluate_vat_compliance_detects_missing_vat_and_approves_consistent_vat(self):
+        """
+        Tester at evaluate_vat_compliance flagger omsetning på 3000-serien uten MVA-kontoer i 2700-serien,
+        og godkjenner et regnskap med konsistent 25 % utgående MVA og inngående MVA.
+        """
+        from compliance_engine import evaluate_vat_compliance
+
+        sample_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../data/sample"))
+        sb = pd.read_csv(os.path.join(sample_dir, "saldobalanse_balansert.csv"))
+        hb = pd.read_csv(os.path.join(sample_dir, "hovedbok_balansert.csv"))
+
+        # Eksempeldata har 200 000 på 3000 Salgsinntekter og 0 på 2700-serien -> skal gi warning
+        vat_warn = evaluate_vat_compliance(sb, hb)
+        assert vat_warn["status"] == "warning"
+        assert vat_warn["taxable_sales_3000"] == 200000.0
+        assert len(vat_warn["findings"]) >= 1
+
+        # Konstruer et MVA-komplett regnskap (100 000 salg + 25 000 utg. MVA 2700, 40 000 kjøp + 10 000 inng. MVA 2710)
+        sb_vat_ok = pd.DataFrame({
+            "Konto": ["1500", "2400", "2700", "2710", "3000", "4000"],
+            "Kontonavn": [
+                "Kundefordringer",
+                "Leverandørgjeld",
+                "Utgående merverdiavgift høy sats",
+                "Inngående merverdiavgift høy sats",
+                "Salgsinntekter avgiftspliktig",
+                "Varekostnad",
+            ],
+            "Debet": [125000.0, 0.0, 0.0, 10000.0, 0.0, 40000.0],
+            "Kredit": [0.0, 50000.0, 25000.0, 0.0, 100000.0, 0.0],
+            "UB": [125000.0, -50000.0, -25000.0, 10000.0, -100000.0, 40000.0],
+        })
+        hb_vat_ok = pd.DataFrame({
+            "Bilagsnr": ["1", "1", "1"],
+            "Konto": ["1500", "3000", "2700"],
+            "Debet": [125000.0, 0.0, 0.0],
+            "Kredit": [0.0, 100000.0, 25000.0],
+        })
+        vat_ok = evaluate_vat_compliance(sb_vat_ok, hb_vat_ok)
+        assert vat_ok["status"] == "ok"
+        assert vat_ok["effective_out_vat_pct"] == 25.0
+        assert len(vat_ok["findings"]) == 0
+
+    def test_evaluate_ns4102_compliance_recognition_rate(self):
+        """
+        Tester at evaluate_ns4102_compliance gir 100 % gjenkjennelsesgrad på gyldig norsk kontoplan
+        og fanger opp ukjente kontonumre (9999) eller manglende kontonavn.
+        """
+        from compliance_engine import evaluate_ns4102_compliance
+
+        sample_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../data/sample"))
+        sb = pd.read_csv(os.path.join(sample_dir, "saldobalanse_balansert.csv"))
+        hb = pd.read_csv(os.path.join(sample_dir, "hovedbok_balansert.csv"))
+
+        ns_ok = evaluate_ns4102_compliance(sb, hb)
+        assert ns_ok["is_compliant"] is True
+        assert ns_ok["overall_recognition_pct"] == 100.0
+        assert ns_ok["number_recognition_pct"] == 100.0
+        assert ns_ok["name_recognition_pct"] == 100.0
+
+        sb_bad = pd.DataFrame({
+            "Konto": ["1920", "9999"],
+            "Kontonavn": ["Bankinnskudd", ""],
+            "Debet": [100.0, 0.0],
+            "Kredit": [0.0, 100.0],
+        })
+        ns_bad = evaluate_ns4102_compliance(sb_bad)
+        assert ns_bad["is_compliant"] is False
+        assert ns_bad["overall_recognition_pct"] == 50.0
+        assert "9999" in ns_bad["unmapped_accounts"]

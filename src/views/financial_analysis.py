@@ -5,12 +5,18 @@ Side 2: Finansiell Analyse (Utvidet CFO KPI-pakke inkl. TKR/EKR & Soliditet) og 
 import pandas as pd
 import streamlit as st
 
-from ledger_analytics import get_account_drilldown, get_voucher_details
+from ledger_analytics import (
+    build_ns4102_income_statement,
+    calculate_ebit_driver_sensitivity,
+    evaluate_profitability_indicators,
+    get_account_drilldown,
+    get_voucher_details,
+)
 
 
 def render_financial_analysis() -> None:
     ws = st.session_state.get("workspace", {})
-    st.title("📊 2. Finansiell Analyse & Hovedbok-Utforsker")
+    st.title("📊 3. Finansiell Analyse & Hovedbok-Utforsker")
     st.markdown(
         "100 % deterministisk finansanalyse (**Lønnsomhet, Likviditet, Soliditet og Rentabilitet TKR/EKR**) "
         "kombinert med interaktiv drill-down i **Hovedboken (HB)** ned til enkeltkonto, løpende saldo og bilagsnivå."
@@ -27,7 +33,9 @@ def render_financial_analysis() -> None:
     metrics = ws["metrics"]
     sb_mapped = ws["sb_mapped"]
     hb_df = ws["hb_df"]
-    cost_drivers = ws.get("cost_drivers", [])
+    income_statement = ws.get("income_statement") or build_ns4102_income_statement(sb_mapped, hb_df, metrics)
+    prof_ind = ws.get("profitability_indicators") or evaluate_profitability_indicators(metrics)
+    ebit_sens = ws.get("ebit_driver_sensitivity") or calculate_ebit_driver_sensitivity(metrics)
 
     if not ws["recon_result"]["is_reconciled"]:
         st.warning(
@@ -139,42 +147,256 @@ def render_financial_analysis() -> None:
             help="Ordinært resultat i prosent av gjennomsnittlig egenkapital ((IB + Reell UB) / 2) for perioden.",
         )
 
-        st.markdown("---")
-        col_g1, col_g2 = st.columns(2)
-        with col_g1:
-            with st.container(border=True):
-                st.markdown("#### 📊 Resultatstruktur (NOK)")
-                chart_df = pd.DataFrame({
-                    "Post": ["Driftsinntekter", "Varekostnad", "Lønn & Øvrig Opex", "EBIT"],
-                    "Beløp (NOK)": [
-                        float(metrics["driftsinntekter"]),
-                        float(metrics["varekostnad"]),
-                        float(metrics["lonnskostnad"] + metrics["andre_driftskostnader"]),
-                        float(metrics["ebit"]),
-                    ],
-                }).set_index("Post")
-                st.bar_chart(chart_df)
+        st.divider()
 
-        with col_g2:
-            with st.container(border=True):
-                st.markdown("#### 🔥 Største Kostnadsdrivere (NS 4102 Klasse 4–7)")
-                if cost_drivers:
-                    drivers_df = pd.DataFrame(cost_drivers)
-                    st.dataframe(
-                        drivers_df,
-                        use_container_width=True,
-                        hide_index=True,
-                        column_config={
-                            "konto": st.column_config.TextColumn("Konto"),
-                            "kontonavn": st.column_config.TextColumn("Kontonavn"),
-                            "belop_nok": st.column_config.NumberColumn("Beløp (NOK)", format="%.0f kr"),
-                            "andel_av_driftskost_pct": st.column_config.NumberColumn("Andel av kost.", format="%.1f %%"),
-                            "andel_av_inntekt_pct": st.column_config.NumberColumn("Andel av innt.", format="%.1f %%"),
-                            "antall_posteringer_hb": st.column_config.NumberColumn("HB-linjer"),
-                        },
+        # ---------------------------------------------------------------------
+        # Oppgave 1: Resultatoppstilling etter NS 4102 (Income Statement)
+        # ---------------------------------------------------------------------
+        with st.container(border=True):
+            hdr_left, hdr_right = st.columns([3.5, 1.2], vertical_alignment="center")
+            with hdr_left:
+                st.markdown("#### 📈 Resultatoppstilling etter NS 4102")
+            with hdr_right:
+                with st.container(horizontal_alignment="right"):
+                    margin_badge_color = "blue" if income_statement["driftsmargin"] >= 0 else "red"
+                    st.badge(
+                        f"Driftsmargin: {income_statement['driftsmargin']:.1f} %",
+                        color=margin_badge_color,
                     )
+
+            th1, th2, th3, th4 = st.columns([3.4, 2.4, 1.5, 1.1], vertical_alignment="center")
+            with th1:
+                st.caption("**REGNSKAPSPOST (NS 4102)**")
+            with th2:
+                st.caption("**KONTOSPESIFIKASJON**")
+            with th3:
+                with st.container(horizontal_alignment="right"):
+                    st.caption("**BELØP (NOK)**")
+            with th4:
+                with st.container(horizontal_alignment="right"):
+                    st.caption("**% AV INNTEKT**")
+
+            for row in income_statement["rows"]:
+                rtype = row["row_type"]
+                post = row["regnskapspost"]
+                spec = row["kontospesifikasjon"]
+                amt = float(row["belop_nok"])
+                pct_str = f"{float(row['andel_pct']):.1f} %"
+
+                if rtype in ("main_cost_1", "main_cost_2", "main_cost_3", "sub_cost", "subtotal_opex"):
+                    belop_str = "-0 NOK" if abs(amt) < 0.005 else f"{amt:,.0f} NOK".replace(",", " ")
                 else:
-                    st.info("Ingen kostnadsposter i klasse 4–7 funnet.")
+                    belop_str = f"{amt:,.0f} NOK".replace(",", " ")
+
+                if rtype in (
+                    "main_income",
+                    "main_cost_1",
+                    "subtotal_gross",
+                    "main_cost_2",
+                    "main_cost_3",
+                    "subtotal_opex",
+                ):
+                    st.divider()
+
+                if rtype == "result_ebit":
+                    with st.container(border=True):
+                        rc1, rc2, rc3, rc4 = st.columns([3.4, 2.4, 1.5, 1.1], vertical_alignment="center")
+                        with rc1:
+                            st.markdown(f":blue[**☑️ {post}**]")
+                        with rc2:
+                            st.markdown(f":blue[**{spec}**]")
+                        with rc3:
+                            with st.container(horizontal_alignment="right"):
+                                st.markdown(f":blue[**{belop_str}**]")
+                        with rc4:
+                            with st.container(horizontal_alignment="right"):
+                                st.markdown(f":blue[**{pct_str}**]")
+                    continue
+
+                rc1, rc2, rc3, rc4 = st.columns([3.4, 2.4, 1.5, 1.1], vertical_alignment="center")
+                if rtype == "main_income":
+                    with rc1:
+                        st.markdown(f":green[●] **{post}**")
+                    with rc2:
+                        st.markdown(f":gray[{spec}]")
+                    with rc3:
+                        with st.container(horizontal_alignment="right"):
+                            st.markdown(f":green[**{belop_str}**]")
+                    with rc4:
+                        with st.container(horizontal_alignment="right"):
+                            st.markdown(f"**{pct_str}**")
+                elif rtype == "sub_income":
+                    with rc1:
+                        st.markdown(f"\u2003{post}")
+                    with rc2:
+                        st.markdown(f":gray[{spec}]")
+                    with rc3:
+                        with st.container(horizontal_alignment="right"):
+                            st.markdown(f"{belop_str}")
+                    with rc4:
+                        with st.container(horizontal_alignment="right"):
+                            st.markdown(f":gray[{pct_str}]")
+                elif rtype in ("main_cost_1", "main_cost_3"):
+                    with rc1:
+                        st.markdown(f":violet[●] **{post}**")
+                    with rc2:
+                        st.markdown(f":gray[{spec}]")
+                    with rc3:
+                        with st.container(horizontal_alignment="right"):
+                            st.markdown(f":red[**{belop_str}**]")
+                    with rc4:
+                        with st.container(horizontal_alignment="right"):
+                            st.markdown(f"**{pct_str}**")
+                elif rtype == "main_cost_2":
+                    with rc1:
+                        st.markdown(f":orange[●] **{post}**")
+                    with rc2:
+                        st.markdown(f":gray[{spec}]")
+                    with rc3:
+                        with st.container(horizontal_alignment="right"):
+                            st.markdown(f":red[**{belop_str}**]")
+                    with rc4:
+                        with st.container(horizontal_alignment="right"):
+                            st.markdown(f"**{pct_str}**")
+                elif rtype == "sub_cost":
+                    with rc1:
+                        st.markdown(f"\u2003{post}")
+                    with rc2:
+                        st.markdown(f":gray[{spec}]")
+                    with rc3:
+                        with st.container(horizontal_alignment="right"):
+                            st.markdown(f":red[{belop_str}]")
+                    with rc4:
+                        with st.container(horizontal_alignment="right"):
+                            st.markdown(f":gray[{pct_str}]")
+                elif rtype == "subtotal_gross":
+                    with rc1:
+                        st.markdown(f"**{post}**")
+                    with rc2:
+                        st.markdown(f":gray[{spec}]")
+                    with rc3:
+                        with st.container(horizontal_alignment="right"):
+                            st.markdown(f":violet[**{belop_str}**]")
+                    with rc4:
+                        with st.container(horizontal_alignment="right"):
+                            st.markdown(f":violet[**{pct_str}**]")
+                elif rtype == "subtotal_opex":
+                    with rc1:
+                        st.markdown(f"**{post}**")
+                    with rc2:
+                        st.markdown(f":gray[{spec}]")
+                    with rc3:
+                        with st.container(horizontal_alignment="right"):
+                            st.markdown(f":red[**{belop_str}**]")
+                    with rc4:
+                        with st.container(horizontal_alignment="right"):
+                            st.markdown(f"**{pct_str}**")
+
+        # ---------------------------------------------------------------------
+        # Oppgave 2: KPI-kort med Kostnadsstruktur og Lønnsomhetsindikatorer
+        # ---------------------------------------------------------------------
+        col_left, col_right = st.columns(2)
+
+        with col_left:
+            with st.container(border=True):
+                st.markdown("#### 📊 Kostnadsstruktur (% av Driftsinntekter)")
+                for bar in prof_ind["cost_bars"]:
+                    b_left, b_right = st.columns([3.2, 1.0], vertical_alignment="center")
+                    if bar["is_highlight"]:
+                        with b_left:
+                            st.markdown(f":blue[**{bar['label']}**]")
+                        with b_right:
+                            with st.container(horizontal_alignment="right"):
+                                st.markdown(f":blue[**{bar['pct']:.1f} %**]")
+                    else:
+                        with b_left:
+                            st.markdown(bar["label"])
+                        with b_right:
+                            with st.container(horizontal_alignment="right"):
+                                st.markdown(f"{bar['pct']:.1f} %")
+                    st.progress(bar["progress"])
+
+        with col_right:
+            with st.container(border=True):
+                st.markdown("#### 📈 Lønnsomhetsindikatorer")
+                kpis = prof_ind["kpis"]
+
+                row1_c1, row1_c2 = st.columns(2)
+                with row1_c1:
+                    with st.container(border=True):
+                        st.caption(kpis["bruttomargin"]["title"])
+                        st.markdown(f"## **{kpis['bruttomargin']['pct']:.1f} %**")
+                        st.caption(kpis["bruttomargin"]["note"])
+                with row1_c2:
+                    with st.container(border=True):
+                        st.caption(kpis["driftsmargin"]["title"])
+                        st.markdown(f"## :blue[**{kpis['driftsmargin']['pct']:.1f} %**]")
+                        st.caption(kpis["driftsmargin"]["note"])
+
+                row2_c1, row2_c2 = st.columns(2)
+                with row2_c1:
+                    with st.container(border=True):
+                        st.caption(kpis["lonn_omsetning"]["title"])
+                        st.markdown(f"## **{kpis['lonn_omsetning']['pct']:.1f} %**")
+                        st.caption(kpis["lonn_omsetning"]["note"])
+                with row2_c2:
+                    with st.container(border=True):
+                        st.caption(kpis["opex_omsetning"]["title"])
+                        st.markdown(f"## **{kpis['opex_omsetning']['pct']:.1f} %**")
+                        st.caption(kpis["opex_omsetning"]["note"])
+
+                if prof_ind["summary_level"] == "success":
+                    st.success(prof_ind["summary_text"], icon="✅")
+                else:
+                    st.info(prof_ind["summary_text"], icon="ℹ️")
+
+        st.divider()
+
+        # ---------------------------------------------------------------------
+        # Analyse av EBIT-drivere (Deterministisk Sensitivitetsanalyse)
+        # ---------------------------------------------------------------------
+        st.subheader("🔍 Analyse av EBIT-drivere")
+        st.caption(
+            "Deterministisk sensitivitetsanalyse (Hva-hvis) beregnet i Python over *The AI Firewall*. "
+            "Viser isolert bunnlinjeeffekt (EBIT i NOK) ved 1 % marginal forbedring i hver hoveddriver."
+        )
+
+        drv_c1, drv_c2, drv_c3 = st.columns(3)
+        with drv_c1:
+            with st.container(border=True):
+                st.metric(
+                    label="1 % økning i pris (Driftsinntekter)",
+                    value=f"+{ebit_sens['price_1pct_nok']:,.0f} NOK".replace(",", " "),
+                    delta=f"Ny EBIT-margin: {ebit_sens['new_margin_price']:.2f} %".replace(".", ","),
+                    help=(
+                        f"1 % ren prisøkning på driftsinntekter ({ebit_sens['driftsinntekter']:,.0f} NOK) "
+                        "ved uendret volum og kostnadsbase går uavkortet til EBIT."
+                    ).replace(",", " "),
+                )
+        with drv_c2:
+            with st.container(border=True):
+                st.metric(
+                    label="1 % reduksjon i varekostnad",
+                    value=f"+{ebit_sens['cogs_1pct_nok']:,.0f} NOK".replace(",", " "),
+                    delta=f"Ny EBIT-margin: {ebit_sens['new_margin_cogs']:.2f} %".replace(".", ","),
+                    help=(
+                        f"1 % reduksjon i varekostnad (konto 4xxx: {ebit_sens['varekostnad']:,.0f} NOK) "
+                        "gjennom bedre innkjøpsbetingelser eller lavere svinn."
+                    ).replace(",", " "),
+                )
+        with drv_c3:
+            with st.container(border=True):
+                st.metric(
+                    label="1 % reduksjon i faste kostnader (Opex)",
+                    value=f"+{ebit_sens['opex_1pct_nok']:,.0f} NOK".replace(",", " "),
+                    delta=f"Ny EBIT-margin: {ebit_sens['new_margin_opex']:.2f} %".replace(".", ","),
+                    help=(
+                        f"1 % effektivisering av faste driftskostnader (konto 5xxx–7xxx: "
+                        f"{ebit_sens['faste_kostnader_base']:,.0f} NOK)."
+                    ).replace(",", " "),
+                )
+
+        st.info(ebit_sens["insight_text"])
 
     with tab_hb:
         st.subheader("🔎 Filtrer Hovedbok og Kontobevegelser")
