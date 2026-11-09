@@ -1,26 +1,30 @@
 # Dynamiske Rapportprofiler: Styrepakke og Beslutningsrapport
 
-## 2026-11-09 kl. 20:38 — turnaround1207
+## 2026-11-09 kl. 21:09 — turnaround1207
 
 ### Oppgave
-Oppgradere rapport- og eksportmotoren slik at brukeren i «💡 6. KI-Rådgiver & Eksport» kan velge mellom å generere **Styrepakke (Strategisk)** for styret og/eller **Beslutningsrapport (Operativ)** for ledelsen via avkrysningsbokser (`st.checkbox`), og refaktorere `src/html_report.py` (`generate_management_html`) til å støtte betinget rendering (`report_type="styre" | "ledelse"`) med skreddersydde innholdsprofiler som gjenspeiler hele verdikjeden.
+Ferdigstille eksportmotoren i `src/html_report.py` (`generate_management_html`) og eksportsteget i `src/views/ai_advisor_and_export.py` slik at applikasjonen genererer to distinkte, skreddersydde HTML-rapporter basert på mottakerens informasjonsbehov (Corporate Governance vs. operativ ledelse): **Styrepakke** (`report_type="styre"`) og **Beslutningsrapport** (`report_type="ledelse"`), med Pydantic-domenemodeller for finansiell analyse, EBIT-drivere (1 % sensitivitet), revisors avstemming, NACE-benchmarking (normalfordelingskurve), anbudsforhandling (RFQ-modul) og operasjonell krysskontroll.
 
 ### Plan
-- Oppdatere eksportsteget i `src/views/ai_advisor_and_export.py` (og tilstandsdefinisjoner i `src/app.py` samt historikkeksport i `src/views/history_and_trends.py`) med to `st.checkbox`-kontroller: `[x] Generer Styrepakke (Strategisk)` og `[ ] Generer Beslutningsrapport (Operativ)`, samt dynamiske nedlastingsknapper for HTML og PDF.
-- Refaktorere `generate_management_html` i `src/html_report.py` til å ta inn `report_type="styre" | "ledelse"` og betingede `<section>`-blokker for de to målgruppene.
-- Utvide `generate_management_pdf` i `src/pdf_generator.py` til også å støtte `report_type="styre" | "ledelse"`.
-- Legge til enhetstester i `tests/test_reporting.py` og `tests/test_app_ui.py` og kjøre full `pytest`-verifisering.
+- Definere og validere Pydantic-domenemodeller i `src/html_report.py` (`EbitDriverSensitivityModel`, `NaceBenchmarkingModel`, `RfqBiddingModel`, `OperationalCrossCheckModel`) og koble dem inn i `generate_management_html` og `src/views/ai_advisor_and_export.py`.
+- Implementere betinget HTML/CSS-rendering for `report_type="styre"` (formelt uttrykk med `theme-styre`, sidebrytning for utskrift og innebygd SVG normalfordelingskurve for NACE-benchmarking) og `report_type="ledelse"` (datatett dashboard-uttrykk med `theme-ledelse`, 1 % EBIT-sensitivitetsanalyse, RFQ-sparepotensial på 81 000 NOK/år og operasjonell krysskontroll mot Konto 1460 / Timelister / CRM).
+- Utvide testsuiten i `tests/test_reporting.py` og verifisere at alle 48 tester i `pytest` passerer.
 
 ### Resultat
-- Oppdatert `src/views/ai_advisor_and_export.py` (og `src/app.py` / `src/views/history_and_trends.py`):
-  - Lagt til `st.checkbox("Generer Styrepakke (Strategisk)", value=True)` og `st.checkbox("Generer Beslutningsrapport (Operativ)", value=False)`.
-  - Genererer og viser separate, målrettede nedlastingsknapper (HTML og PDF) i minnet (`io.BytesIO`) for én eller begge rapportprofiler basert på brukerens valg.
-- Refaktorert `src/html_report.py` (`generate_management_html`):
-  - Støtter `report_type="styre"` (standard) og `report_type="ledelse"` med validering og betinget rendering av `<section>`-elementer.
-  - **Styrepakke (`report_type="styre"`):** (1) Executive Summary med revisjonsstatus og utbyttekapasitetsvurdering, (2) Hovedtall & Lønnsomhet (EBIT, Bruttomargin, Soliditet, TKR/EKR), (3) Revisors avstemming (Compliance: HB/SB-balanse og NS 4102-klassifisering), (4) Bransjeposisjonering (V2-teaser med NACE-sammenligning og kvartilindikator), og (5) Strategiske KI-råd.
-  - **Beslutningsrapport (`report_type="ledelse"`):** (1) Operativ Oppsummering med drifts- og arbeidskapitalfokus, (2) Detaljert Resultatoppstilling etter NS 4102 med %-vise marginer, (3) Kostnadsdrivere (Varekostnad, Lønn, Opex med tilgjengelige CSS progress-bars `role="progressbar"` og kontospesifikasjon), (4) MVA & Avviksdetaljer for regnskapsfører/CFO, (5) Operasjonell Analyse (V2-teaser: krysskontroll mot timelister, varelager og CRM), og (6) Operative KI-råd for kostnadskutt, prising og reskontro-optimalisering.
-  - Bevarer 100 % in-memory generering (`io.BytesIO`), Zero-Dependency HTML5/CSS3, WCAG 2.1 AA-kontrast, `@media print`-støtte og streng *The AI Firewall*-beskyttelse (ingen råbilag lekker til HTML).
-- Utvidet `tests/test_reporting.py` og `tests/test_app_ui.py` – samtlige 47 tester i testsuiten passerer (`47 passed`).
+- Utvidet `src/html_report.py` med Pydantic-domenemodellene `EbitDriverSensitivityModel`, `NaceBenchmarkingModel`, `RfqBiddingModel` og `OperationalCrossCheckModel`, samt betinget rendering i `generate_management_html`:
+  - **Styrepakke (`report_type="styre"`, `theme-styre`):**
+    1. *Executive Summary (Strategisk KI-innsikt):* Overordnet finansiell helse, kapitalstruktur og deterministisk utbyttekapasitetsvurdering (Aksjeloven § 8-1).
+    2. *Hovedtall & Lønnsomhet:* Aggregert visning av Bruttomargin, Driftsmargin (EBIT), Egenkapitalandel (Soliditet) og Totalkapitalrentabilitet (TKR/EKR) uten enkeltkontostøy.
+    3. *Governance & Compliance (Revisors avstemming):* Bekreftelse på HB/SB-balanse ($\sum D = \sum K$, $\text{IB} + \text{HB} = \text{UB}$) og NS 4102-klassifisering (med `.print-page-break` for utskrift).
+    4. *Strategisk Posisjonering (NACE-Benchmarking V2):* Selvstendig inline SVG normalfordelingskurve (Bell Curve, 3. kvartil / Topp 25 % mot 6,0 % bransjesnitt) og driver-benchmarking med algoritmisk gap-identifikator (`54 000 NOK` EBIT-potensial).
+    5. *Viktigste Strategiske Tiltak:* Overordnede KI-råd knyttet til makrotrender, kapitalbinding og strategisk prising.
+  - **Beslutningsrapport (`report_type="ledelse"`, `theme-ledelse`):**
+    1. *Operativ Oppsummering (Taktisk KI-innsikt):* Fokus på kortsiktig likviditet, kostnadsavvik og operasjonell effektivitet.
+    2. *Detaljert Resultatoppstilling & EBIT-drivere:* Full NS 4102-nedbryting med %-marginer, kostnadsdrivere med `role="progressbar"` og deterministisk 1 % sensitivitetsanalyse (`+2 000 NOK` ved 1 % prisøkning, `+600 NOK` ved 1 % kutt i varekostnad, `+300 NOK` ved 1 % kutt i faste kostnader/Opex).
+    3. *Kostnadskontroll & Anbud (Innkjøpsfokus / RFQ-modul):* Oversikt over kostnadslekkasjer på Bankrente (`45 000 NOK/år`), Forsikring (`24 000 NOK/år`) og Strøm (`12 000 NOK/år`) med samlet årlig sparepotensial på `81 000 NOK/år`.
+    4. *Operasjonell Krysskontroll (V2):* Avstemmingsstatus mellom fagsystemer og hovedbok (**Varelager vs. Konto 1460**, **Timelister vs. Lønnskostnad**, **CRM/SaaS vs. Kundefordringer og Lisenser**), etterfulgt av MVA- og avvikssjekkliste.
+    5. *Taktiske Tiltak:* Konkrete steg for reforhandling av avtaler (RFQ), reduksjon av reskontrotid (DSO) og fjerning av inaktive lisenser.
+- Oppdatert `src/views/ai_advisor_and_export.py` og `tests/test_reporting.py` – alle 48 tester i `pytest` passerer (`48 passed`).
 
 ### Åpne punkter
 - Ingen.
