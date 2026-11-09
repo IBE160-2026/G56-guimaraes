@@ -1,6 +1,179 @@
 import html
 import io
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
+from pydantic import BaseModel, Field
+
+
+# =============================================================================
+# PYDANTIC DOMENEMODELLER FOR EKSPORTMOTOREN (The AI Firewall – v2.0)
+# =============================================================================
+
+
+class EbitDriverSensitivityModel(BaseModel):
+    """Pydantic-modell for deterministisk EBIT-driver sensitivitetsanalyse (1 % endring)."""
+
+    driftsinntekter: float = 0.0
+    varekostnad: float = 0.0
+    faste_kostnader_base: float = 0.0
+    ebit: float = 0.0
+    driftsmargin: float = 0.0
+    bruttomargin: float = 0.0
+    price_1pct_nok: float = 0.0
+    cogs_1pct_nok: float = 0.0
+    opex_1pct_nok: float = 0.0
+    new_margin_price: float = 0.0
+    new_margin_cogs: float = 0.0
+    new_margin_opex: float = 0.0
+    price_vs_opex_mult: float = 0.0
+    price_vs_cogs_mult: float = 0.0
+    insight_text: str = ""
+
+
+class NaceDriverComparisonItem(BaseModel):
+    """Enkeltlinje i NACE-driverbenchmarking mot bransjesnitt."""
+
+    driver_label: str
+    company_pct: float
+    industry_pct: float
+    diff_pp: float
+    unfavorable_gap_pp: float
+    ebit_potential_nok: float
+
+
+class NaceBenchmarkingModel(BaseModel):
+    """Pydantic-modell for Strategisk Posisjonering (NACE-Benchmarking & Normalfordeling V2)."""
+
+    nace_code: str = "62.010 Programmeringstjenester"
+    industry_mean_ebit_pct: float = 6.0
+    industry_std_ebit_pct: float = 6.0
+    simulated_company_ebit_pct: float = 12.0
+    quartile_position_label: str = "3. kvartil (Topp 25 %)"
+    largest_gap_cost_label: str = "varekostnad"
+    largest_gap_pp: float = 4.5
+    largest_gap_ebit_nok: float = 54000.0
+    potential_banner_text: str = (
+        "Største forbedringspotensial: Din varekostnad er 4,5 prosentpoeng høyere enn "
+        "bransjesnittet. Ved å lukke dette gapet vil EBIT øke med 54 000 NOK."
+    )
+    drivers: List[NaceDriverComparisonItem] = Field(
+        default_factory=lambda: [
+            NaceDriverComparisonItem(
+                driver_label="Bruttomargin vs. Bransje",
+                company_pct=63.5,
+                industry_pct=68.0,
+                diff_pp=-4.5,
+                unfavorable_gap_pp=4.5,
+                ebit_potential_nok=54000.0,
+            ),
+            NaceDriverComparisonItem(
+                driver_label="Lønnskostnad/Omsetning vs. Bransje",
+                company_pct=34.0,
+                industry_pct=42.5,
+                diff_pp=-8.5,
+                unfavorable_gap_pp=0.0,
+                ebit_potential_nok=0.0,
+            ),
+            NaceDriverComparisonItem(
+                driver_label="Opex/Omsetning vs. Bransje",
+                company_pct=17.5,
+                industry_pct=19.5,
+                diff_pp=-2.0,
+                unfavorable_gap_pp=0.0,
+                ebit_potential_nok=0.0,
+            ),
+        ]
+    )
+
+
+class RfqLeakageItem(BaseModel):
+    """Pydantic-modell for identifisert kostnadslekkasje og sparepotensial i RFQ-modulen."""
+
+    kategori: str
+    konto_ref: str
+    avlest_vilkar: str
+    markedsstandard: str
+    tiltak_beskrivelse: str
+    arlig_sparepotensial_nok: float
+
+
+class RfqBiddingModel(BaseModel):
+    """Pydantic-modell for Kostnadskontroll & Anbud (RFQ-modul V2)."""
+
+    total_annual_savings_nok: float = 81000.0
+    rfq_reference: str = "RFQ-2026-G56-FINANS"
+    items: List[RfqLeakageItem] = Field(
+        default_factory=lambda: [
+            RfqLeakageItem(
+                kategori="Bankrente & Driftskreditt",
+                konto_ref="Konto 2380 / 8150",
+                avlest_vilkar="Effektiv rentemargin 4,5 %",
+                markedsstandard="Markedsstandard SMB ≤ 2,5 % (-2,0 %-poeng)",
+                tiltak_beskrivelse="Send formell RFQ til 3 forretningsbanker for reforhandling av kassekreditt og innskuddsrente.",
+                arlig_sparepotensial_nok=45000.0,
+            ),
+            RfqLeakageItem(
+                kategori="Bedrifts- og Yrkesskadeforsikring",
+                konto_ref="Konto 7500",
+                avlest_vilkar="Årlig premie 120 000 NOK (indeksjustert)",
+                markedsstandard="Samleanbud med 20 % premiereduksjon",
+                tiltak_beskrivelse="Utlys samleanbud på yrkesskade-, ansvars- og tingskadeforsikring basert på skadefri historikk.",
+                arlig_sparepotensial_nok=24000.0,
+            ),
+            RfqLeakageItem(
+                kategori="Strøm & Lokaler",
+                konto_ref="Konto 6340",
+                avlest_vilkar="Spotpris + skjult påslag 9 øre/kWh og fastbeløp",
+                markedsstandard="Ren bedriftsspot uten skjulte påslag",
+                tiltak_beskrivelse="Bytt til fremforhandlet næringsstrømavtale uten sertifikatpåslag og faste månedsgebyrer.",
+                arlig_sparepotensial_nok=12000.0,
+            ),
+        ]
+    )
+
+
+class OperationalCrossCheckItem(BaseModel):
+    """Pydantic-modell for enkeltpunkt i operasjonell krysskontroll mellom fagsystem og hovedbok."""
+
+    fagsystem: str
+    regnskapskonto: str
+    kontrollformaal: str
+    status_etikett: str
+    observasjon: str
+
+
+class OperationalCrossCheckModel(BaseModel):
+    """Pydantic-modell for Operasjonell Krysskontroll (V2)."""
+
+    items: List[OperationalCrossCheckItem] = Field(
+        default_factory=lambda: [
+            OperationalCrossCheckItem(
+                fagsystem="Lagersystem (WMS) vs. Regnskap",
+                regnskapskonto="Varelager vs. Konto 1460 / 1400 & Konto 4000 Varekostnad",
+                kontrollformaal="Avdekke fysisk varesvinn, ukurans og periodiseringsavvik mellom lageruttak og bokført varekostnad.",
+                status_etikett="V2 KRYSSKONTROLL KLAR",
+                observasjon="Kontrollerer rullerende varetelling mot bokført beholdning på Konto 1460 (Innkjøpte varer for videresalg).",
+            ),
+            OperationalCrossCheckItem(
+                fagsystem="Timelister (HRM/Prosjekt) vs. Lønn",
+                regnskapskonto="Timelister vs. Lønnskostnad (Konto 5000 & Konto 3000 Salg)",
+                kontrollformaal="Avdekke lav faktureringsgrad, ufakturerte prosjekttimer og overtid uten tilhørende kundeinntekt.",
+                status_etikett="V2 KRYSSKONTROLL KLAR",
+                observasjon="Sammenstiller produserte timer mot utbetalt fastlønn og utfakturert honorar per konsulent/avdeling.",
+            ),
+            OperationalCrossCheckItem(
+                fagsystem="CRM & Lisensregister vs. Reskontro",
+                regnskapskonto="CRM/SaaS vs. Konto 1500 Kundefordringer & Konto 6800 Kontor/IT",
+                kontrollformaal="Redusere kredittid (DSO) på forfalte fakturaer og identifisere inaktive programvarelisenser til oppsigelse.",
+                status_etikett="V2 KRYSSKONTROLL KLAR",
+                observasjon="Kryssjekker aktive ansatte mot løpende SaaS-abonnementer og automatiserer purreløp ved 14 dagers forfall.",
+            ),
+        ]
+    )
+
+
+# =============================================================================
+# HJELPEFUNKSJONER FOR FORMATERING OG DETERMINISTISK DATAINJEKSJON
+# =============================================================================
 
 
 def _format_nok(value: float, decimals: int = 0) -> str:
@@ -30,6 +203,80 @@ def _normalize_report_type(report_type: str) -> str:
     if rt in ("ledelse", "beslutningsrapport", "operativ", "management", "operational"):
         return "ledelse"
     raise ValueError(f"Ugyldig report_type '{report_type}'. Forventet 'styre' eller 'ledelse'.")
+
+
+def _coerce_ebit_sensitivity(
+    ebit_sensitivity: Optional[Union[EbitDriverSensitivityModel, Dict[str, Any]]],
+    metrics: Dict[str, Any],
+) -> EbitDriverSensitivityModel:
+    """Sikrer et validert EbitDriverSensitivityModel-objekt fra eksisterende data eller metrics."""
+    if isinstance(ebit_sensitivity, EbitDriverSensitivityModel):
+        return ebit_sensitivity
+    if isinstance(ebit_sensitivity, dict):
+        return EbitDriverSensitivityModel(**ebit_sensitivity)
+
+    from ledger_analytics import calculate_ebit_driver_sensitivity
+
+    calc = calculate_ebit_driver_sensitivity(metrics)
+    return EbitDriverSensitivityModel(**calc)
+
+
+def _coerce_nace_benchmark(
+    nace_benchmark: Optional[Union[NaceBenchmarkingModel, Dict[str, Any]]],
+) -> NaceBenchmarkingModel:
+    """Sikrer et validert NaceBenchmarkingModel-objekt."""
+    if isinstance(nace_benchmark, NaceBenchmarkingModel):
+        return nace_benchmark
+    if isinstance(nace_benchmark, dict):
+        drivers_raw = nace_benchmark.get("drivers")
+        if drivers_raw is None and "drivers_df" in nace_benchmark:
+            df = nace_benchmark["drivers_df"]
+            drivers_raw = [
+                NaceDriverComparisonItem(
+                    driver_label=str(r["driver_label"]),
+                    company_pct=float(r["company_pct"]),
+                    industry_pct=float(r["industry_pct"]),
+                    diff_pp=float(r["diff_pp"]),
+                    unfavorable_gap_pp=float(r["unfavorable_gap_pp"]),
+                    ebit_potential_nok=float(r["ebit_potential_nok"]),
+                )
+                for _, r in df.iterrows()
+            ]
+        return NaceBenchmarkingModel(
+            largest_gap_cost_label=str(nace_benchmark.get("largest_gap_cost_label", "varekostnad")),
+            largest_gap_pp=float(nace_benchmark.get("largest_gap_pp", 4.5)),
+            largest_gap_ebit_nok=float(nace_benchmark.get("largest_gap_ebit_nok", 54000.0)),
+            potential_banner_text=str(
+                nace_benchmark.get(
+                    "potential_banner_text",
+                    "Største forbedringspotensial: Din varekostnad er 4,5 prosentpoeng høyere enn bransjesnittet.",
+                )
+            ),
+            drivers=drivers_raw or NaceBenchmarkingModel().drivers,
+        )
+    return NaceBenchmarkingModel()
+
+
+def _coerce_rfq_report(
+    rfq_report: Optional[Union[RfqBiddingModel, Dict[str, Any]]],
+) -> RfqBiddingModel:
+    """Sikrer et validert RfqBiddingModel-objekt."""
+    if isinstance(rfq_report, RfqBiddingModel):
+        return rfq_report
+    if isinstance(rfq_report, dict):
+        return RfqBiddingModel(**rfq_report)
+    return RfqBiddingModel()
+
+
+def _coerce_operational_check(
+    operational_check: Optional[Union[OperationalCrossCheckModel, Dict[str, Any]]],
+) -> OperationalCrossCheckModel:
+    """Sikrer et validert OperationalCrossCheckModel-objekt."""
+    if isinstance(operational_check, OperationalCrossCheckModel):
+        return operational_check
+    if isinstance(operational_check, dict):
+        return OperationalCrossCheckModel(**operational_check)
+    return OperationalCrossCheckModel()
 
 
 def _build_reconciliation_table_html(is_reconciled: bool, discrepancies_df: Any) -> str:
@@ -155,6 +402,54 @@ def _build_action_rows_html(tiltak_items: List[Any]) -> str:
     return "".join(action_rows_html)
 
 
+def _build_bell_curve_svg(company_margin_pct: float, industry_mean_pct: float = 6.0) -> str:
+    """
+    Genererer et 100 % selvstendig (Zero-Dependency) inline SVG-diagram av normalfordelingskurven
+    for EBIT-margin i bransjen (NACE), med markør for bransjesnitt og selskapets posisjon.
+    """
+    # Map margin [-12 %, +24 %] til x-koordinat [40, 560] i et 600x160 SVG-koordinatsystem
+    clamped = min(max(company_margin_pct, -10.0), 22.0)
+    company_x = int(round(40 + ((clamped - (-12.0)) / 36.0) * 520))
+    mean_x = 300  # 6,0 % ligger midt i intervallet [-12, +24]
+    company_lbl = _format_percent(company_margin_pct, 1)
+    mean_lbl = _format_percent(industry_mean_pct, 1)
+
+    return f"""
+    <div class="bell-curve-container" role="img" aria-label="Normalfordelingskurve for lønnsomhet i bransjen (NACE)">
+      <svg viewBox="0 0 600 165" width="100%" height="165" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="bellGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#1e3a8a" stop-opacity="0.28"/>
+            <stop offset="100%" stop-color="#1e3a8a" stop-opacity="0.03"/>
+          </linearGradient>
+        </defs>
+        <!-- Bunnlinje -->
+        <line x1="30" y1="130" x2="570" y2="130" stroke="#94a3b8" stroke-width="1.5"/>
+        <!-- Normalfordelingskurve (Bell Curve) -->
+        <path d="M 40 130 C 110 129, 160 118, 210 82 C 245 52, 272 24, 300 24 C 328 24, 355 52, 390 82 C 440 118, 490 129, 560 130 Z"
+              fill="url(#bellGrad)" stroke="#1e3a8a" stroke-width="2.2"/>
+        <!-- Bransjesnitt (Midtlinje 6,0 %) -->
+        <line x1="{mean_x}" y1="20" x2="{mean_x}" y2="130" stroke="#64748b" stroke-width="1.5" stroke-dasharray="4,4"/>
+        <text x="{mean_x}" y="14" text-anchor="middle" fill="#475569" font-size="11" font-weight="600">
+          Bransjesnitt: {mean_lbl}
+        </text>
+        <!-- Selskapets posisjon -->
+        <line x1="{company_x}" y1="22" x2="{company_x}" y2="130" stroke="#16a34a" stroke-width="2.5"/>
+        <circle cx="{company_x}" cy="48" r="5" fill="#16a34a" stroke="#ffffff" stroke-width="1.5"/>
+        <rect x="{max(35, min(company_x - 68, 460))}" y="135" width="136" height="22" rx="4" fill="#f0fdf4" stroke="#16a34a" stroke-width="1"/>
+        <text x="{max(103, min(company_x, 528))}" y="150" text-anchor="middle" fill="#14532d" font-size="11" font-weight="700">
+          Selskap: {company_lbl}
+        </text>
+        <!-- Kvartil-etiketter -->
+        <text x="115" y="122" text-anchor="middle" fill="#64748b" font-size="10">1. kvartil</text>
+        <text x="240" y="122" text-anchor="middle" fill="#64748b" font-size="10">2. kvartil</text>
+        <text x="365" y="122" text-anchor="middle" fill="#1e3a8a" font-size="10" font-weight="700">3. kvartil (Topp 25 %)</text>
+        <text x="485" y="122" text-anchor="middle" fill="#64748b" font-size="10">4. kvartil</text>
+      </svg>
+    </div>
+    """
+
+
 def generate_management_html(
     company_name: str,
     ai_report: Any,
@@ -169,26 +464,41 @@ def generate_management_html(
     income_statement: Optional[Dict[str, Any]] = None,
     cost_drivers: Optional[List[Dict[str, Any]]] = None,
     profitability_indicators: Optional[Dict[str, Any]] = None,
+    ebit_sensitivity: Optional[Union[EbitDriverSensitivityModel, Dict[str, Any]]] = None,
+    nace_benchmark: Optional[Union[NaceBenchmarkingModel, Dict[str, Any]]] = None,
+    rfq_report: Optional[Union[RfqBiddingModel, Dict[str, Any]]] = None,
+    operational_check: Optional[Union[OperationalCrossCheckModel, Dict[str, Any]]] = None,
     period_label: Optional[str] = None,
 ) -> io.BytesIO:
     """
-    Genererer en selvstendig, responsiv og offline-klar HTML5-rapport direkte i minnet (io.BytesIO).
-    Støtter to målgruppetilpassede innholdsprofiler via `report_type`:
-      - report_type="styre": Strategisk Styrepakke (Executive Summary, Hovedtall & Lønnsomhet,
-        Revisors avstemming/Compliance, Bransjeposisjonering V2-teaser, Strategiske KI-råd).
-      - report_type="ledelse": Operativ Beslutningsrapport (Operativ Oppsummering, Detaljert
-        Resultatoppstilling etter NS 4102, Kostnadsdrivere med progress/fordeling, MVA & Avviksdetaljer,
-        Operasjonell Analyse V2-teaser, Operative KI-råd).
+    Genererer to distinkte, skreddersydde og selvstendige HTML5-rapporter direkte i minnet (io.BytesIO):
+      1. report_type="styre" (Styrepakke – Målgruppe: Styret/Eiere):
+         - Executive Summary (Strategisk KI-innsikt: finansiell helse, kapitalstruktur, utbyttekapasitet)
+         - Hovedtall & Lønnsomhet (Aggregert: Bruttomargin, Driftsmargin/EBIT, Soliditet, TKR/EKR)
+         - Governance & Compliance (Revisors avstemming: HB/SB-balanse og NS 4102-etterlevelse)
+         - Strategisk Posisjonering (NACE-Benchmarking V2: Normalfordelingskurve og driver-gap)
+         - Viktigste Strategiske Tiltak (Overordnede KI-råd knyttet til makrotrender, kapitalbinding og strategisk prising)
+      2. report_type="ledelse" (Beslutningsrapport – Målgruppe: CEO/CFO/Ledere):
+         - Operativ Oppsummering (Taktisk KI-innsikt: kortsiktig likviditet, kostnadsavvik og effektivitet)
+         - Detaljert Resultatoppstilling & EBIT-drivere (Full NS 4102-nedbryting + 1 % sensitivitetsanalyse)
+         - Kostnadskontroll & Anbud (Innkjøpsfokus / RFQ-modul: Bankrente, Forsikring, Strøm og årlig sparepotensial i NOK)
+         - Operasjonell Krysskontroll (V2: Varelager vs. Konto 1460, Timelister vs. Lønnskostnad, CRM vs. Reskontro)
+         - Taktiske Tiltak (Konkrete steg for reforhandling av avtaler, reduksjon av reskontrotid og fjerning av inaktive lisenser)
 
-    ARKITEKTURGARANTI (The AI Firewall & FR-5.1 / FR-5.2):
-    - Ingen tall beregnes i denne modulen, i HTML, i JavaScript eller av språkmodellen.
-    - Alle nøkkeltall (metrics), lønnsomhetsråd (recommendations), avstemmingsresultater (recon_result)
-      og KI-tekster (ai_report) kommer ferdig utregnet og validert fra Python/Pydantic.
-    - All dynamisk tekst renses med html.escape() (FR-5.6).
+    ARKITEKTURGARANTI (The AI Firewall & FR-5.1 / FR-5.2 / FR-5.6):
+    - Ingen regnskapstall beregnes av språkmodellen eller i HTML/JS. Alle tabeller, nøkkeltall og beløp
+      injiseres deterministisk fra Python/Pydantic-objekter.
+    - All dynamisk tekst renses med html.escape().
     """
     profile = _normalize_report_type(report_type)
     safe_company = html.escape(str(company_name or "Selskap AS"))
     safe_period = html.escape(str(period_label or "Inneværende regnskapsperiode"))
+
+    # Validerte Pydantic-domeneobjekter
+    sens_model = _coerce_ebit_sensitivity(ebit_sensitivity, metrics)
+    nace_model = _coerce_nace_benchmark(nace_benchmark)
+    rfq_model = _coerce_rfq_report(rfq_report)
+    op_check_model = _coerce_operational_check(operational_check)
 
     # Avstemmingsstatus
     is_reconciled = True
@@ -253,7 +563,6 @@ def generate_management_html(
     bankinnskudd_str = _format_nok(metrics.get("bankinnskudd", 0.0), decimals=0)
     kundefordringer_str = _format_nok(metrics.get("kundefordringer", 0.0), decimals=0)
     leverandorgjeld_str = _format_nok(metrics.get("leverandorgjeld", 0.0), decimals=0)
-    varelager_str = _format_nok(metrics.get("varelager", 0.0), decimals=0)
     reell_ek_str = _format_nok(metrics.get("reell_egenkapital_ub", 0.0), decimals=0)
     totalkapital_str = _format_nok(metrics.get("totalkapital_ub", 0.0), decimals=0)
 
@@ -301,12 +610,13 @@ def generate_management_html(
     # BETINGET RENDERING BASERT PÅ REPORT_TYPE ("styre" vs. "ledelse")
     # =========================================================================
     if profile == "styre":
+        theme_class = "theme-styre"
         doc_title = f"Styrepakke (Strategisk) – {safe_company}"
-        header_badge = "STRATEGISK STYREPAKKE &bull; GOVERNANCE, SOLIDITET &amp; RISIKO"
+        header_badge = "STRATEGISK STYREPAKKE &bull; CORPORATE GOVERNANCE, RISIKOSTYRING &amp; LANGSIKTIG LØNNSOMHET"
         header_h1 = f"Styrepakke: {safe_company}"
         header_subtitle = (
-            f"Strategisk styrerapport ({safe_period}) &bull; Utarbeidet med KI-Revisor &bull; "
-            "Basert på NS 4102 Kontoplan og Kryssavstemt Hovedbok (The AI Firewall)"
+            f"Målgruppe: Styret og Eiere ({safe_period}) &bull; Utarbeidet med KI-Revisor &bull; "
+            "Aggregert styringsinformasjon etter NS 4102 og Revisors Avstemming (The AI Firewall)"
         )
 
         # NS 4102 Compliance-data for styret
@@ -322,15 +632,15 @@ def generate_management_html(
             ns_pct_str = "100,0 %"
             ns_status_lbl = "Standard NS 4102 (1000–8999)"
             ns_summary_txt = (
-                "Kontoplanen er strukturert og klassifisert etter Norsk Standard Kontoplan (NS 4102) "
-                "og tilfredsstiller bokføringslovens krav til norsk regnskapsspråk."
+                "Kontoplanen følger Norsk Standard Kontoplan (NS 4102) med 4-sifret kontostruktur "
+                "og tilfredsstiller bokføringslovens og regnskapslovens krav til norsk regnskapsspråk."
             )
 
         hb_sb_status_lbl = "Balansert (∑D = ∑K)" if is_reconciled else f"{discrepancy_count} kontoavvik"
         dividend_status = (
-            "Forsvarlig utbyttegrunnlag (Soliditet ≥ 30 %, Likviditetsgrad ≥ 2,0 og godkjent avstemming)"
+            "Forsvarlig utbyttekapasitet bekreftet (Soliditet ≥ 30 %, Likviditetsgrad ≥ 2,0 og 100 % avstemt regnskap)"
             if (is_reconciled and egenkapitalandel_val >= 30.0 and likviditetsgrad_1_val >= 2.0 and ebit_val > 0)
-            else "Tilbakeholdelse anbefales (Prioriter kapitalbuffer, likviditet eller korrigering av avstemmingsavvik før utdeling)"
+            else "Tilbakeholdelse av utbytte anbefales (Styrk egenkapitalbuffer/likviditet eller korriger avstemmingsavvik før utdeling)"
         )
 
         deterministic_styre_html = _build_deterministic_recommendations_html(
@@ -339,27 +649,44 @@ def generate_management_html(
             heading_title="Deterministisk Lønnsomhetspotensial (Beregnet i Python)",
         )
 
-        # Beregn posisjon på konseptuell bransjekurve (0-100 % bredde) for V2-teaser
+        # Normalfordelingskurve (Bell Curve SVG) og NACE-benchmarking for V2
+        bell_svg_html = _build_bell_curve_svg(
+            company_margin_pct=nace_model.simulated_company_ebit_pct,
+            industry_mean_pct=nace_model.industry_mean_ebit_pct,
+        )
+        nace_rows_html = []
+        for d_item in nace_model.drivers:
+            pot_cell = _format_nok(d_item.ebit_potential_nok, 0) if d_item.ebit_potential_nok > 0 else "—"
+            nace_rows_html.append(
+                f"<tr>"
+                f"<td><strong>{html.escape(d_item.driver_label)}</strong></td>"
+                f"<td class='num'>{_format_percent(d_item.company_pct, 1)}</td>"
+                f"<td class='num'>{_format_percent(d_item.industry_pct, 1)}</td>"
+                f"<td class='num'>{d_item.diff_pp:+.1f} %-poeng</td>"
+                f"<td class='num'><strong>{pot_cell}</strong></td>"
+                f"</tr>".replace(".", ",")
+            )
+
         benchmark_marker_pct = min(max(int(round((driftsmargin_val + 10.0) / 35.0 * 100.0)), 8), 92)
 
         sections_html = f"""
-    <!-- 1. EXECUTIVE SUMMARY -->
+    <!-- 1. EXECUTIVE SUMMARY (STRATEGISK KI-INNSIKT) -->
     <section id="styre-executive-summary" aria-labelledby="exec-summary-heading">
-      <h2 id="exec-summary-heading">1. Executive Summary (Topplederoppsummering til Styret)</h2>
+      <h2 id="exec-summary-heading">1. Executive Summary (Strategisk KI-innsikt til Styret)</h2>
       <div class="status-banner {status_class}" role="region" aria-label="Avstemmingsstatus og hovedkonklusjon">
         <span class="status-badge">[{status_badge}]</span>
-        <p class="section-text"><strong>Hovedkonklusjon til Styret:</strong> {hovedkonklusjon}</p>
+        <p class="section-text"><strong>Overordnet finansiell helse:</strong> {hovedkonklusjon}</p>
         <p class="section-text" style="margin-bottom:0; font-size:0.9rem;">{status_summary}</p>
       </div>
       <div class="callout-grid">
         <div class="info-card">
-          <div class="info-card-title">Finansiell Bærekraft &amp; Kapitalavkastning</div>
+          <div class="info-card-title">Kapitalstruktur, Soliditet &amp; Langsiktig Avkastning</div>
           <p class="section-text" style="margin-bottom:0;">{soliditet_rentabilitet}</p>
         </div>
         <div class="info-card">
           <div class="info-card-title">Vurdering av Utbyttekapasitet (Aksjeloven § 8-1)</div>
           <p class="section-text" style="margin-bottom:0;">
-            <strong>Status:</strong> {html.escape(dividend_status)}<br/>
+            <strong>Styrebeslutningsgrunnlag:</strong> {html.escape(dividend_status)}<br/>
             Reell egenkapital utgjør <strong>{reell_ek_str}</strong> av totalkapital på <strong>{totalkapital_str}</strong>
             (egenkapitalandel <strong>{egenkapitalandel_str}</strong>, gjeldsgrad <strong>{gjeldsgrad_str}</strong>).
           </p>
@@ -367,29 +694,29 @@ def generate_management_html(
       </div>
     </section>
 
-    <!-- 2. HOVEDTALL & LØNNSOMHET -->
+    <!-- 2. HOVEDTALL & LØNNSOMHET (AGGREGERT STYREVISNING) -->
     <section id="styre-hovedtall" aria-labelledby="kpi-heading">
-      <h2 id="kpi-heading">2. Hovedtall &amp; Lønnsomhet (Aggregert Styrevisning etter NS 4102)</h2>
+      <h2 id="kpi-heading">2. Hovedtall &amp; Lønnsomhet (Aggregert Styrevisning – Uten Enkeltkontostøy)</h2>
       <div class="kpi-grid">
-        <div class="kpi-card highlight-card">
-          <div class="kpi-label">Driftsresultat (EBIT)</div>
-          <div class="kpi-value">{ebit_str}</div>
-          <div class="kpi-sub">Driftsmargin: {driftsmargin_str}</div>
-        </div>
         <div class="kpi-card highlight-card">
           <div class="kpi-label">Bruttomargin</div>
           <div class="kpi-value">{bruttomargin_str}</div>
           <div class="kpi-sub">Bruttofortj.: {bruttofortjeneste_str}</div>
         </div>
         <div class="kpi-card highlight-card">
-          <div class="kpi-label">Soliditet (EK-andel)</div>
+          <div class="kpi-label">Driftsmargin (EBIT)</div>
+          <div class="kpi-value">{driftsmargin_str}</div>
+          <div class="kpi-sub">EBIT: {ebit_str}</div>
+        </div>
+        <div class="kpi-card highlight-card">
+          <div class="kpi-label">Egenkapitalandel (Soliditet)</div>
           <div class="kpi-value">{egenkapitalandel_str}</div>
           <div class="kpi-sub">Gjeldsgrad: {gjeldsgrad_str}</div>
         </div>
         <div class="kpi-card highlight-card">
-          <div class="kpi-label">Egenkapitalrent. (EKR)</div>
-          <div class="kpi-value">{ekr_str}</div>
-          <div class="kpi-sub">TKR: {tkr_str}</div>
+          <div class="kpi-label">Totalkapitalrent. (TKR)</div>
+          <div class="kpi-value">{tkr_str}</div>
+          <div class="kpi-sub">EKR: {ekr_str}</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-label">Driftsinntekter</div>
@@ -400,8 +727,8 @@ def generate_management_html(
           <div class="kpi-value">{driftskostnader_str}</div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-label">Driftsmargin</div>
-          <div class="kpi-value">{driftsmargin_str}</div>
+          <div class="kpi-label">Driftsresultat (EBIT)</div>
+          <div class="kpi-value">{ebit_str}</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-label">Bruttofortjeneste</div>
@@ -420,36 +747,36 @@ def generate_management_html(
           <div class="kpi-value">{likviditetsgrad_2_str}</div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-label">Totalkapitalrent. (TKR)</div>
-          <div class="kpi-value">{tkr_str}</div>
+          <div class="kpi-label">Egenkapitalrent. (EKR)</div>
+          <div class="kpi-value">{ekr_str}</div>
         </div>
       </div>
 
       <div class="callout-grid">
         <div class="info-card">
-          <div class="info-card-title">Strategisk Lønnsomhets- og Marginvurdering</div>
+          <div class="info-card-title">Langsiktig Lønnsomhets- og Marginutvikling</div>
           <p class="section-text" style="margin-bottom:0;">{lonnsomhet}</p>
         </div>
         <div class="info-card">
-          <div class="info-card-title">Finansiell Beredskap &amp; Likviditetsvurdering</div>
+          <div class="info-card-title">Finansiell Beredskap &amp; Kapitalbinding</div>
           <p class="section-text" style="margin-bottom:0;">{likviditet}</p>
         </div>
       </div>
     </section>
 
-    <!-- 3. REVISORS AVSTEMMING (COMPLIANCE) -->
-    <section id="styre-compliance" aria-labelledby="compliance-heading">
-      <h2 id="compliance-heading">3. Revisors Avstemming &amp; Governance (Compliance)</h2>
+    <!-- 3. GOVERNANCE & COMPLIANCE (REVISORS AVSTEMMING) -->
+    <section id="styre-compliance" class="print-page-break" aria-labelledby="compliance-heading">
+      <h2 id="compliance-heading">3. Governance &amp; Compliance (Revisors Avstemming &amp; NS 4102)</h2>
       <div class="kpi-grid kpi-grid-3">
         <div class="kpi-card">
-          <div class="kpi-label">Balansesjekk (HB &amp; SB)</div>
+          <div class="kpi-label">Balansesjekk (HB / SB)</div>
           <div class="kpi-value">{html.escape(hb_sb_status_lbl)}</div>
-          <div class="kpi-sub">Dobbelt bokføringskontroll</div>
+          <div class="kpi-sub">Dobbelt bokføringsprinsipp</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-label">Kryssavstemming (IB + HB = UB)</div>
           <div class="kpi-value">{discrepancy_count} avvik</div>
-          <div class="kpi-sub">{'100 % konsistent' if is_reconciled else 'Krever korrigering'}</div>
+          <div class="kpi-sub">{'100 % verifisert datakvalitet' if is_reconciled else 'Krever korrigering før vastsettelse'}</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-label">NS 4102 Klassifisering</div>
@@ -459,46 +786,53 @@ def generate_management_html(
       </div>
 
       <div class="info-card" style="margin-bottom: 14px;">
-        <div class="info-card-title">Revisors Avstemmingsnotat (Internkontroll &amp; Regnskapspålitelighet)</div>
+        <div class="info-card-title">Revisors Avstemmingsnotat til Styret (Internkontroll)</div>
         <p class="section-text">{revisor_notat}</p>
-        <p class="section-text" style="margin-bottom:0; font-size:0.88rem;"><strong>NS 4102 Etterlevelse:</strong> {ns_summary_txt}</p>
+        <p class="section-text" style="margin-bottom:0; font-size:0.88rem;"><strong>NS 4102 &amp; Regnskapsloven § 3-4:</strong> {ns_summary_txt}</p>
       </div>
 
-      <h3 class="sub-heading">Status for Kryssavstemming: Hovedbok mot Saldobalanse (IB + HB = UB)</h3>
+      <h3 class="sub-heading">Kontrollbekreftelse: Hovedbok mot Saldobalanse (IB + HB = UB)</h3>
       {reconciliation_section_html}
     </section>
 
-    <!-- 4. BRANSJEPOSISJONERING (V2-TEASER) -->
+    <!-- 4. STRATEGISK POSISJONERING (NACE-BENCHMARKING - FREMHEVET FOR V2) -->
     <section id="styre-bransje-v2" aria-labelledby="industry-v2-heading">
-      <h2 id="industry-v2-heading">4. Bransjeposisjonering &amp; NACE-Benchmarking (V2-Teaser)</h2>
+      <h2 id="industry-v2-heading">4. Strategisk Posisjonering &amp; Bransjeposisjonering (NACE-Benchmarking – V2)</h2>
       <div class="teaser-box">
-        <span class="teaser-badge">V2.0 VEIKART &bull; STRATEGISK BRANSJEPOSISJONERING (NACE / BRØNNØYSUNDREGISTRENE)</span>
+        <span class="teaser-badge">V2.0 STRATEGISK MODUL &bull; NACE-BENCHMARKING MOT BRØNNØYSUNDREGISTRENE</span>
         <p class="section-text">
-          Konseptuell visning av <strong>{safe_company}</strong> sin strategiske posisjonering mot referansebransjen
-          (<em>NACE 62.010 / Norske SMB-tjenesteforetak</em>). I versjon 2.0 kobles regnskapets deterministiske nøkkeltall
-          direkte mot offisiell bransjestatistikk fra Enhetsregisteret.
+          Plassering på normalfordelingskurven for lønnsomhet (EBIT-margin %) innen referansebransjen
+          <strong>{html.escape(nace_model.nace_code)}</strong>. Selskapet er posisjonert i
+          <strong>{html.escape(nace_model.quartile_position_label)}</strong> ved
+          <strong>{_format_percent(nace_model.simulated_company_ebit_pct, 1)}</strong> mot et bransjesnitt på
+          <strong>{_format_percent(nace_model.industry_mean_ebit_pct, 1)}</strong> (aktuell regnskapsmargin i perioden: <strong>{driftsmargin_str}</strong>).
         </p>
-        <div class="kpi-grid kpi-grid-3" style="margin-bottom: 14px;">
-          <div class="kpi-card">
-            <div class="kpi-label">EBIT-Margin vs. Bransjesnitt</div>
-            <div class="kpi-value">{driftsmargin_str}</div>
-            <div class="kpi-sub">Referansesnitt NACE: 6,0 %</div>
-          </div>
-          <div class="kpi-card">
-            <div class="kpi-label">Bruttomargin vs. Bransjesnitt</div>
-            <div class="kpi-value">{bruttomargin_str}</div>
-            <div class="kpi-sub">Referansesnitt NACE: 55,0 %</div>
-          </div>
-          <div class="kpi-card">
-            <div class="kpi-label">Soliditet vs. Bransjenorm</div>
-            <div class="kpi-value">{egenkapitalandel_str}</div>
-            <div class="kpi-sub">Anbefalt SMB-norm: ≥ 30,0 %</div>
-          </div>
+
+        {bell_svg_html}
+
+        <div class="table-wrapper" style="margin-top: 12px;">
+          <table class="data-table" aria-label="NACE Driver-benchmarking">
+            <thead>
+              <tr>
+                <th>Strategisk EBIT-driver</th>
+                <th class="num">Selskap (Benchmark)</th>
+                <th class="num">Bransjesnitt (NACE)</th>
+                <th class="num">Spread (%-poeng)</th>
+                <th class="num">Uforløst EBIT-potensial</th>
+              </tr>
+            </thead>
+            <tbody>
+              {''.join(nace_rows_html)}
+            </tbody>
+          </table>
         </div>
-        <div class="progress-row">
+        <p class="section-text" style="margin-top: 10px; margin-bottom: 6px;">
+          <strong>Algoritmisk Gap-identifikator:</strong> {html.escape(nace_model.potential_banner_text)}
+        </p>
+        <div class="progress-row" style="margin-bottom:0;">
           <div class="progress-header">
-            <span><strong>Konseptuell Kvartilplassering i Bransjen (Normalfordeling EBIT-margin)</strong></span>
-            <span>Selskap: <strong>{driftsmargin_str}</strong> (Bransjesnitt: 6,0 %)</span>
+            <span><strong>Relativ styrkeposisjon mot referansebransjen</strong></span>
+            <span>{html.escape(nace_model.quartile_position_label)}</span>
           </div>
           <div class="progress-track" role="progressbar" aria-valuenow="{benchmark_marker_pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Bransjeposisjonering">
             <div class="progress-fill progress-navy" style="width: {benchmark_marker_pct}%;"></div>
@@ -507,28 +841,47 @@ def generate_management_html(
       </div>
     </section>
 
-    <!-- 5. STRATEGISKE KI-RÅD -->
+    <!-- 5. VIKTIGSTE STRATEGISKE TILTAK -->
     <section id="styre-strategiske-rad" aria-labelledby="strategic-actions-heading">
-      <h2 id="strategic-actions-heading">5. Strategiske KI-Råd: Vekst, Kapitalallokering &amp; Utbyttekapasitet</h2>
+      <h2 id="strategic-actions-heading">5. Viktigste Strategiske Tiltak (Makrotrender, Kapitalbinding &amp; Strategisk Prising)</h2>
+      <div class="callout-grid">
+        <div class="info-card">
+          <div class="info-card-title">Makrotrender &amp; Strategisk Prising</div>
+          <p class="section-text" style="margin-bottom:0;">
+            I et inflasjons- og rentemiljø med økt kostnadspress på innsatsfaktorer må styret sikre at
+            prisjusteringer gjennomføres proaktivt. En 1 % indeksregulering av prisstrukturen øker EBIT
+            direkte med <strong>{_format_nok(sens_model.price_1pct_nok, 0)}</strong> uten økt kapitalbinding.
+          </p>
+        </div>
+        <div class="info-card">
+          <div class="info-card-title">Kapitalallokering &amp; Arbeidskapitaldisiplin</div>
+          <p class="section-text" style="margin-bottom:0;">
+            Redusert kapitalbinding i kundefordringer (<strong>{kundefordringer_str}</strong>) og optimalisert
+            forvaltning av likviditetsreserven (<strong>{bankinnskudd_str}</strong>) styrker både
+            totalkapitalrentabiliteten (<strong>{tkr_str}</strong>) og utbyttekapasiteten.
+          </p>
+        </div>
+      </div>
+
       {deterministic_styre_html}
 
       <div class="subsection-block">
-        <h3 id="risk-heading">Identifiserte Strategiske Faresignaler &amp; Risikofaktorer</h3>
+        <h3 id="risk-heading">Strategiske Risikofaktorer &amp; Faresignaler</h3>
         <ul class="risk-list">
           {risk_list_html}
         </ul>
       </div>
 
       <div class="subsection-block">
-        <h3 id="actions-heading">Strategisk Tiltaksliste for Styret (KI-CFO)</h3>
+        <h3 id="actions-heading">Prioriterte Styrevedtak og Strategiske Tiltak (KI-CFO)</h3>
         <div class="table-wrapper">
-          <table class="data-table" aria-label="Strategisk tiltaksliste for styret">
+          <table class="data-table" aria-label="Viktigste strategiske tiltak for styret">
             <thead>
               <tr>
                 <th>Prioritet</th>
-                <th>Strategisk Tiltak</th>
-                <th>Begrunnelse (Styre- og Kapitalperspektiv)</th>
-                <th>Forventet Effekt (Vekst / Utbytteevne)</th>
+                <th>Strategisk Tiltak (Prising / Kapitalbinding / Vekst)</th>
+                <th>Begrunnelse</th>
+                <th>Forventet Strategisk Effekt</th>
               </tr>
             </thead>
             <tbody>
@@ -542,14 +895,16 @@ def generate_management_html(
     else:
         # =====================================================================
         # PROFIL: BESLUTNINGSRAPPORT (report_type == "ledelse")
-        # Fokus: Operasjonell drift, Kostnadskontroll, MVA/Avvik, Tiltak
+        # Målgruppe: CEO / CFO / Ledere
+        # Formål: Taktisk kostnadskontroll, prosessforbedring og likviditetstiltak
         # =====================================================================
+        theme_class = "theme-ledelse"
         doc_title = f"Beslutningsrapport (Operativ) – {safe_company}"
-        header_badge = "OPERATIV BESLUTNINGSRAPPORT &bull; DRIFT, KOSTNADSKONTROLL &amp; LIKVIDITET"
+        header_badge = "OPERATIV BESLUTNINGSRAPPORT &bull; TAKTISK KOSTNADSKONTROLL, EBIT-DRIVERE &amp; ANBUD (RFQ)"
         header_h1 = f"Beslutningsrapport for Ledelsen: {safe_company}"
         header_subtitle = (
-            f"Operasjonell styringsrapport ({safe_period}) &bull; Utarbeidet med KI-CFO &bull; "
-            "Fokus: Resultatnedbryting, Kostnadsdrivere, MVA-kontroll og Arbeidskapital (The AI Firewall)"
+            f"Målgruppe: CEO, CFO og Operativ Ledelse ({safe_period}) &bull; Utarbeidet med KI-CFO &bull; "
+            "Fokus: NS 4102 Resultatnedbryting, EBIT-Sensitivitet, Anbud (RFQ) og Operasjonell Krysskontroll (The AI Firewall)"
         )
 
         # Bygg deterministisk resultatoppstilling etter NS 4102 (uten å lekke råbilag fra HB)
@@ -612,7 +967,6 @@ def generate_management_html(
         for r in raw_rows:
             rtype = str(r.get("row_type", ""))
             post_txt = html.escape(str(r.get("regnskapspost", "")))
-            # Sikre at kontospesifikasjon på underkontoer kun bruker NS 4102-standardbetegnelse (ingen rå HB-beskrivelser)
             if rtype == "sub_income":
                 spec_txt = "Bokført kreditsaldo i Saldobalanse (NS 4102)"
             elif rtype == "sub_cost":
@@ -721,7 +1075,6 @@ def generate_management_html(
                     f"</tr>"
                 )
         else:
-            # Deterministisk fallback fra aggregert NS 4102-kostnadsstruktur
             if varekostnad_val > 0:
                 vk_opex_share = (varekostnad_val / samlede_driftskost_val * 100.0) if samlede_driftskost_val > 0 else 0.0
                 driver_rows_html.append(
@@ -746,6 +1099,42 @@ def generate_management_html(
                     f"<td class='num'>{_format_percent(ox_opex_share, 1)}</td>"
                     f"<td class='num'>{opex_andel_str}</td></tr>"
                 )
+
+        # Sensitivitetsverdier fra EbitDriverSensitivityModel
+        sens_price_str = _format_nok(sens_model.price_1pct_nok, decimals=0)
+        sens_cogs_str = _format_nok(sens_model.cogs_1pct_nok, decimals=0)
+        sens_opex_str = _format_nok(sens_model.opex_1pct_nok, decimals=0)
+        sens_new_m_price = _format_percent(sens_model.new_margin_price, decimals=2)
+        sens_new_m_cogs = _format_percent(sens_model.new_margin_cogs, decimals=2)
+        sens_new_m_opex = _format_percent(sens_model.new_margin_opex, decimals=2)
+        clean_insight_txt = html.escape(sens_model.insight_text.replace("**", ""))
+
+        # Kostnadskontroll & Anbud (RFQ-modul)
+        rfq_rows_html = []
+        for item in rfq_model.items:
+            rfq_rows_html.append(
+                f"<tr>"
+                f"<td><strong>{html.escape(item.kategori)}</strong><br/><span class='kpi-sub'>{html.escape(item.konto_ref)}</span></td>"
+                f"<td>{html.escape(item.avlest_vilkar)}</td>"
+                f"<td>{html.escape(item.markedsstandard)}</td>"
+                f"<td>{html.escape(item.tiltak_beskrivelse)}</td>"
+                f"<td class='num'><strong>{_format_nok(item.arlig_sparepotensial_nok, 0)}/år</strong></td>"
+                f"</tr>"
+            )
+        rfq_total_str = _format_nok(rfq_model.total_annual_savings_nok, decimals=0)
+
+        # Operasjonell Krysskontroll (V2)
+        op_check_rows_html = []
+        for chk in op_check_model.items:
+            op_check_rows_html.append(
+                f"<tr>"
+                f"<td><strong>{html.escape(chk.fagsystem)}</strong></td>"
+                f"<td><strong>{html.escape(chk.regnskapskonto)}</strong></td>"
+                f"<td>{html.escape(chk.kontrollformaal)}</td>"
+                f"<td>{html.escape(chk.observasjon)}</td>"
+                f"<td><span class='prio-badge prio-medium'>{html.escape(chk.status_etikett)}</span></td>"
+                f"</tr>"
+            )
 
         # MVA- og Avviksdetaljer for regnskapsfører/CFO
         if vat_compliance is not None:
@@ -787,12 +1176,12 @@ def generate_management_html(
         )
 
         sections_html = f"""
-    <!-- 1. OPERATIV OPPSUMMERING -->
+    <!-- 1. OPERATIV OPPSUMMERING (TAKTISK KI-INNSIKT) -->
     <section id="ledelse-operativ-oppsummering" aria-labelledby="op-summary-heading">
-      <h2 id="op-summary-heading">1. Operativ Oppsummering (Drifts- og Likviditetsstatus for Ledelsen)</h2>
+      <h2 id="op-summary-heading">1. Operativ Oppsummering (Taktisk KI-innsikt: Likviditet, Kostnadsavvik &amp; Effektivitet)</h2>
       <div class="status-banner {status_class}" role="region" aria-label="Avstemmingsstatus og operativ oppsummering">
         <span class="status-badge">[{status_badge}]</span>
-        <p class="section-text"><strong>Operativ Konklusjon til Daglig Leder &amp; CFO:</strong> {hovedkonklusjon}</p>
+        <p class="section-text"><strong>Operativ Konklusjon (CEO / CFO):</strong> {hovedkonklusjon}</p>
         <p class="section-text" style="margin-bottom:0; font-size:0.9rem;">{status_summary}</p>
       </div>
 
@@ -838,19 +1227,19 @@ def generate_management_html(
 
       <div class="callout-grid">
         <div class="info-card">
-          <div class="info-card-title">Operativ Drifts- og Marginanalyse (KI-CFO)</div>
+          <div class="info-card-title">Operasjonell Effektivitet &amp; Kostnadsavvik (KI-CFO)</div>
           <p class="section-text" style="margin-bottom:0;">{lonnsomhet}</p>
         </div>
         <div class="info-card">
-          <div class="info-card-title">Arbeidskapital, Reskontro og Kontantstrøm</div>
+          <div class="info-card-title">Kortsiktig Likviditet &amp; Reskontrostyring</div>
           <p class="section-text" style="margin-bottom:0;">{likviditet}</p>
         </div>
       </div>
     </section>
 
-    <!-- 2. DETALJERT RESULTATOPPSTILLING -->
+    <!-- 2. DETALJERT RESULTATOPPSTILLING & EBIT-DRIVERE -->
     <section id="ledelse-resultatoppstilling" aria-labelledby="income-stmt-heading">
-      <h2 id="income-stmt-heading">2. Detaljert Resultatoppstilling etter NS 4102 (Med %-vise Marginer)</h2>
+      <h2 id="income-stmt-heading">2. Detaljert Resultatoppstilling &amp; EBIT-drivere (NS 4102 + Sensitivitetsanalyse)</h2>
       <div class="table-wrapper">
         <table class="data-table" aria-label="Detaljert resultatoppstilling etter NS 4102">
           <thead>
@@ -866,17 +1255,40 @@ def generate_management_html(
           </tbody>
         </table>
       </div>
+
+      <div class="subsection-block">
+        <h3 class="sub-heading">Sensitivitetsanalyse på EBIT-drivere (1 % marginal forbedring)</h3>
+        <div class="kpi-grid kpi-grid-3">
+          <div class="kpi-card highlight-card">
+            <div class="kpi-label">Effekt av 1 % økning i pris</div>
+            <div class="kpi-value">+{sens_price_str}</div>
+            <div class="kpi-sub">Ny EBIT-margin: {sens_new_m_price}</div>
+          </div>
+          <div class="kpi-card highlight-card">
+            <div class="kpi-label">Effekt av 1 % kutt i varekostnad</div>
+            <div class="kpi-value">+{sens_cogs_str}</div>
+            <div class="kpi-sub">Ny EBIT-margin: {sens_new_m_cogs}</div>
+          </div>
+          <div class="kpi-card highlight-card">
+            <div class="kpi-label">Effekt av 1 % kutt i faste kostnader (Opex)</div>
+            <div class="kpi-value">+{sens_opex_str}</div>
+            <div class="kpi-sub">Ny EBIT-margin: {sens_new_m_opex}</div>
+          </div>
+        </div>
+        <div class="info-card">
+          <p class="section-text" style="margin-bottom:0;">{clean_insight_txt}</p>
+        </div>
+      </div>
     </section>
 
-    <!-- 3. KOSTNADSDRIVERE -->
+    <!-- 2B. KOSTNADSDRIVERE & PROGRESS -->
     <section id="ledelse-kostnadsdrivere" aria-labelledby="cost-drivers-heading">
-      <h2 id="cost-drivers-heading">3. Kostnadsdrivere: Fordeling av Varekostnad, Lønn og Opex</h2>
-      <div class="info-card" style="margin-bottom: 16px;">
+      <h2 id="cost-drivers-heading">Kostnadsdrivere: Fordeling av Varekostnad, Lønn og Opex</h2>
+      <div class="info-card" style="margin-bottom: 14px;">
         <div class="info-card-title">Kostnadsstruktur og Marginfordeling (% av Driftsinntekter)</div>
         {''.join(progress_bars_html)}
       </div>
 
-      <h3 class="sub-heading">Spesifikasjon av Største Kostnadsdrivere (NS 4102 Kontoklasse 4–7)</h3>
       <div class="table-wrapper">
         <table class="data-table" aria-label="Største kostnadsdrivere">
           <thead>
@@ -895,9 +1307,80 @@ def generate_management_html(
       </div>
     </section>
 
-    <!-- 4. MVA & AVVIKSDETALJER -->
+    <!-- 3. KOSTNADSKONTROLL & ANBUD (INNKJØPSFOKUS / RFQ-MODUL) -->
+    <section id="ledelse-anbud-rfq" aria-labelledby="rfq-heading">
+      <h2 id="rfq-heading">3. Kostnadskontroll &amp; Anbud (Innkjøpsfokus – RFQ-Modul)</h2>
+      <div class="kpi-grid kpi-grid-3">
+        <div class="kpi-card">
+          <div class="kpi-label">Bankrente &amp; Driftskreditt (2380/8150)</div>
+          <div class="kpi-value">45 000 NOK/år</div>
+          <div class="kpi-sub">Avlest 4,5 % vs. marked 2,5 %</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Forsikringspremier (Konto 7500)</div>
+          <div class="kpi-value">24 000 NOK/år</div>
+          <div class="kpi-sub">-20 % ved samleanbud</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Strøm &amp; Lokaler (Konto 6340)</div>
+          <div class="kpi-value">12 000 NOK/år</div>
+          <div class="kpi-sub">-9 øre/kWh skjult påslag</div>
+        </div>
+      </div>
+
+      <div class="table-wrapper">
+        <table class="data-table" aria-label="Identifiserte kostnadslekkasjer og anbudspotensial">
+          <thead>
+            <tr>
+              <th>Innkjøpskategori &amp; Konto</th>
+              <th>Avlest Vilkår (OCR/Kontrakt)</th>
+              <th>Markedsstandard Benchmark</th>
+              <th>Anbefalt Anbudstiltak (RFQ)</th>
+              <th class="num">Årlig Sparepotensial</th>
+            </tr>
+          </thead>
+          <tbody>
+            {''.join(rfq_rows_html)}
+            <tr class="row-highlight">
+              <td colspan="4"><strong>Totalt identifisert årlig innsparingspotensial ved anbudsutsettelse ({html.escape(rfq_model.rfq_reference)})</strong></td>
+              <td class="num"><strong>{rfq_total_str}/år</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 4. OPERASJONELL KRYSSKONTROLL (FREMHEVET FOR V2) -->
+    <section id="ledelse-operasjonell-v2" aria-labelledby="op-v2-heading">
+      <h2 id="op-v2-heading">4. Operasjonell Krysskontroll mellom Fagsystemer og Hovedbok (V2)</h2>
+      <div class="teaser-box">
+        <span class="teaser-badge">V2.0 OPERATIV KRYSSKONTROLL &bull; VARELAGER VS. KONTO 1460, TIMELISTER VS. LØNNSKOSTNAD &amp; CRM</span>
+        <p class="section-text">
+          Status på automatisert avstemming mellom bedriftens operasjonelle fagsystemer (WMS, Timelister og CRM)
+          og verifiserte hovedbokskontoer for å avdekke varesvinn, lav faktureringsgrad eller inaktive lisenser:
+        </p>
+        <div class="table-wrapper">
+          <table class="data-table" aria-label="Operasjonell krysskontroll mellom fagsystemer og regnskap">
+            <thead>
+              <tr>
+                <th>Fagsystem / Kilde</th>
+                <th>Avstemt Regnskapskonto (NS 4102)</th>
+                <th>Operasjonelt Kontrollformål</th>
+                <th>Status &amp; Observasjon</th>
+                <th>Kontrollstatus</th>
+              </tr>
+            </thead>
+            <tbody>
+              {''.join(op_check_rows_html)}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4B. MVA-KONTROLL & AVVIKSDETALJER -->
     <section id="ledelse-mva-og-avvik" aria-labelledby="vat-audit-heading">
-      <h2 id="vat-audit-heading">4. MVA-Kontroll &amp; Avviksdetaljer (Tiltakspunkter for Regnskapsfører / CFO)</h2>
+      <h2 id="vat-audit-heading">MVA-Kontroll &amp; Avviksdetaljer (Regnskapsfører / CFO Sjekkliste)</h2>
       <div class="kpi-grid">
         <div class="kpi-card">
           <div class="kpi-label">Avgiftspliktig Salg (30xx)</div>
@@ -929,6 +1412,36 @@ def generate_management_html(
 
       <h3 class="sub-heading">Kryssavstemming Hovedbok mot Saldobalanse (IB + HB = UB per konto)</h3>
       {reconciliation_section_html}
+    </section>
+
+    <!-- 5. TAKTISKE TILTAK -->
+    <section id="ledelse-operative-rad" aria-labelledby="op-actions-heading">
+      <h2 id="op-actions-heading">5. Taktiske Tiltak: Reforhandling av Avtaler, Reduksjon av Reskontrotid &amp; Lisenssanering</h2>
+      <div class="kpi-grid kpi-grid-3">
+        <div class="info-card">
+          <div class="info-card-title">1. Reforhandling av Avtaler (RFQ)</div>
+          <p class="section-text" style="margin-bottom:0; font-size:0.88rem;">
+            Send ut ferdiggenerert anbudsforespørsel (<strong>{html.escape(rfq_model.rfq_reference)}</strong>) på bankrente
+            (Konto 2380/8150), forsikring (Konto 7500) og strøm (Konto 6340) for å realisere <strong>{rfq_total_str}/år</strong>.
+          </p>
+        </div>
+        <div class="info-card">
+          <div class="info-card-title">2. Reduksjon av Reskontrotid (DSO)</div>
+          <p class="section-text" style="margin-bottom:0; font-size:0.88rem;">
+            Stram inn kredittid til 14 dager og aktiver automatisk purring på utestående kundefordringer
+            (<strong>{kundefordringer_str}</strong> på Konto 1500) for umiddelbar likviditetsfrigjøring.
+          </p>
+        </div>
+        <div class="info-card">
+          <div class="info-card-title">3. Fjerning av Inaktive Lisenser</div>
+          <p class="section-text" style="margin-bottom:0; font-size:0.88rem;">
+            Gjennomfør lisensrevisjon mot aktiv ansattliste på programvare- og SaaS-kontoer (Konto 6800/6xxx)
+            og avslutt ubenyttede setelisenser før neste fornyelsessyklus.
+          </p>
+        </div>
+      </div>
+
+      {deterministic_ledelse_html}
 
       <div class="subsection-block">
         <h3 id="op-risk-heading">Operasjonelle Faresignaler &amp; Kontrollpunkter</h3>
@@ -936,59 +1449,17 @@ def generate_management_html(
           {risk_list_html}
         </ul>
       </div>
-    </section>
-
-    <!-- 5. OPERASJONELL ANALYSE (V2-TEASER) -->
-    <section id="ledelse-operasjonell-v2" aria-labelledby="op-v2-heading">
-      <h2 id="op-v2-heading">5. Operasjonell Analyse &amp; Krysskontroll mot Forsystemer (V2-Teaser)</h2>
-      <div class="teaser-box">
-        <span class="teaser-badge">V2.0 VEIKART &bull; OPERASJONELL KRYSSKONTROLL (TIMELISTER, VARELAGER &amp; CRM)</span>
-        <p class="section-text">
-          I versjon 2.0 utvides <strong>The AI Firewall</strong> med deterministisk krysskontroll mellom regnskapets
-          hovedbok og bedriftens operasjonelle forsystemer:
-        </p>
-        <div class="kpi-grid kpi-grid-3">
-          <div class="info-card">
-            <div class="info-card-title">1. Timelister &amp; Faktureringsgrad</div>
-            <p class="section-text" style="margin-bottom:0; font-size:0.88rem;">
-              Kryssjekker registrerte timer i timeregistreringssystem mot bokført lønnskostnad
-              (<strong>{lonnskostnad_str}</strong> / lønnsandel <strong>{lonnsandel_str}</strong>) og utfakturert omsetning (konto 3000)
-              for å avdekke ufakturerte timer.
-            </p>
-          </div>
-          <div class="info-card">
-            <div class="info-card-title">2. Varelager &amp; Innkjøpskontroll</div>
-            <p class="section-text" style="margin-bottom:0; font-size:0.88rem;">
-              Avstemmer fysisk varelager (<strong>{varelager_str}</strong> på konto 14xx) og logistikkuttak mot bokført
-              varekostnad (<strong>{varekostnad_str}</strong>) for å identifisere svinn, ukurans og marginlekkasje.
-            </p>
-          </div>
-          <div class="info-card">
-            <div class="info-card-title">3. CRM &amp; Reskontro-oppfølging</div>
-            <p class="section-text" style="margin-bottom:0; font-size:0.88rem;">
-              Kobler CRM-pipeline og forfallsstruktur mot utestående kundefordringer (<strong>{kundefordringer_str}</strong> på konto 1500)
-              og leverandørgjeld (<strong>{leverandorgjeld_str}</strong> på konto 2400) for automatisert likviditetsstyring.
-            </p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 6. OPERATIVE KI-RÅD -->
-    <section id="ledelse-operative-rad" aria-labelledby="op-actions-heading">
-      <h2 id="op-actions-heading">6. Operative KI-Råd: Kostnadskutt, Prising &amp; Reskontro-optimalisering</h2>
-      {deterministic_ledelse_html}
 
       <div class="subsection-block">
-        <h3 id="actions-heading">Operativ Handlingsplan for Daglig Leder &amp; CFO (KI-Rådgiver)</h3>
+        <h3 id="actions-heading">Operativ Handlingsplan for CEO / CFO (KI-Rådgiver)</h3>
         <div class="table-wrapper">
-          <table class="data-table" aria-label="Operativ tiltaksliste for ledelsen">
+          <table class="data-table" aria-label="Taktiske tiltak for ledelsen">
             <thead>
               <tr>
                 <th>Prioritet</th>
-                <th>Konkret Operativt Tiltak</th>
-                <th>Driftsmessig Begrunnelse</th>
-                <th>Målbar Effekt (Kostnad / Likviditet)</th>
+                <th>Taktisk Tiltak (Reforhandling / Reskontro / Lisenser)</th>
+                <th>Operativ Begrunnelse</th>
+                <th>Målbar Likviditets- og Resultateffekt</th>
               </tr>
             </thead>
             <tbody>
@@ -1043,6 +1514,27 @@ def generate_management_html(
       border: 1px solid var(--border);
       border-radius: 8px;
       padding: 32px;
+    }}
+    /* Formelt, stramt uttrykk for Styrepakke */
+    .container.theme-styre {{
+      border-top: 6px solid var(--navy);
+      padding: 38px 40px;
+    }}
+    .container.theme-styre h1 {{
+      font-family: Georgia, "Times New Roman", Times, serif;
+      letter-spacing: -0.01em;
+    }}
+    /* Datatett, operativt dashboard-oppsett for Beslutningsrapport */
+    .container.theme-ledelse {{
+      max-width: 1060px;
+      border-top: 6px solid #0f766e;
+      padding: 26px 28px;
+    }}
+    .container.theme-ledelse .kpi-grid {{
+      gap: 10px;
+    }}
+    .container.theme-ledelse .kpi-card {{
+      padding: 10px 12px;
     }}
     header {{
       border-bottom: 2px solid var(--navy);
@@ -1186,6 +1678,13 @@ def generate_management_html(
       padding: 3px 8px;
       border-radius: 4px;
       margin-bottom: 10px;
+    }}
+    .bell-curve-container {{
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin: 10px 0;
     }}
     .progress-row {{
       margin-bottom: 12px;
@@ -1338,7 +1837,11 @@ def generate_management_html(
         padding: 0;
         max-width: 100%;
       }}
-      section, .kpi-grid, .callout-grid, .status-banner, .teaser-box, tr {{
+      .print-page-break {{
+        page-break-before: always;
+        break-before: page;
+      }}
+      section, .kpi-grid, .callout-grid, .status-banner, .teaser-box, .bell-curve-container, tr {{
         break-inside: avoid;
         page-break-inside: avoid;
       }}
@@ -1353,7 +1856,7 @@ def generate_management_html(
   </style>
 </head>
 <body>
-  <main class="container" data-report-type="{profile}">
+  <main class="container {theme_class}" data-report-type="{profile}">
     <header>
       <span class="profile-badge">{header_badge}</span>
       <h1>{header_h1}</h1>

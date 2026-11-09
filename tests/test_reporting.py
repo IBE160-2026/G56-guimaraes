@@ -289,12 +289,19 @@ class TestReportingAndExport:
     def test_html_report_profiles_styre_vs_ledelse_conditional_rendering(self):
         """
         Tester at generate_management_html skiller tydelig mellom report_type='styre' (Styrepakke)
-        og report_type='ledelse' (Beslutningsrapport) med riktig innholdsprofil, null eksterne
-        avhengigheter, full The AI Firewall-beskyttelse og støtte for @media print.
+        og report_type='ledelse' (Beslutningsrapport) med riktig innholdsprofil, Pydantic-domeneobjekter,
+        null eksterne avhengigheter, full The AI Firewall-beskyttelse og støtte for @media print.
         """
         from compliance_engine import evaluate_ns4102_compliance, evaluate_vat_compliance
+        from html_report import (
+            EbitDriverSensitivityModel,
+            NaceBenchmarkingModel,
+            OperationalCrossCheckModel,
+            RfqBiddingModel,
+        )
         from ledger_analytics import (
             build_ns4102_income_statement,
+            calculate_ebit_driver_sensitivity,
             evaluate_profitability_indicators,
             generate_profitability_recommendations,
             summarize_cost_drivers,
@@ -311,6 +318,11 @@ class TestReportingAndExport:
         metrics = calculate_detailed_financial_metrics(sb)
         income_stmt = build_ns4102_income_statement(sb, hb, metrics)
         prof_ind = evaluate_profitability_indicators(metrics)
+        sens_dict = calculate_ebit_driver_sensitivity(metrics)
+        sens_model = EbitDriverSensitivityModel(**sens_dict)
+        nace_model = NaceBenchmarkingModel()
+        rfq_model = RfqBiddingModel()
+        op_check_model = OperationalCrossCheckModel()
         drivers = summarize_cost_drivers(sb, hb)
         recs = generate_profitability_recommendations(metrics, drivers)
         report = generate_management_report(sb, recon_result=recon_res, mock_mode=True, hb_df=hb)
@@ -329,19 +341,29 @@ class TestReportingAndExport:
             income_statement=income_stmt,
             cost_drivers=drivers,
             profitability_indicators=prof_ind,
+            ebit_sensitivity=sens_model,
+            nace_benchmark=nace_model,
+            rfq_report=rfq_model,
+            operational_check=op_check_model,
             period_label="2026-01",
         )
         styre_html = styre_buf.getvalue().decode("utf-8")
 
         assert 'data-report-type="styre"' in styre_html
+        assert "theme-styre" in styre_html
+        assert "print-page-break" in styre_html
         assert 'id="styre-executive-summary"' in styre_html
         assert 'id="styre-hovedtall"' in styre_html
         assert 'id="styre-compliance"' in styre_html
         assert 'id="styre-bransje-v2"' in styre_html
         assert 'id="styre-strategiske-rad"' in styre_html
         assert "Utbyttekapasitet" in styre_html
-        assert "Bransjeposisjonering" in styre_html
+        assert "Strategisk Posisjonering" in styre_html
+        assert "<svg" in styre_html  # Innebygd normalfordelingskurve (Bell Curve)
+        assert "54 000 NOK" in styre_html  # NACE gap-potensial
+        assert "Makrotrender" in styre_html
         assert 'id="ledelse-resultatoppstilling"' not in styre_html
+        assert 'id="ledelse-anbud-rfq"' not in styre_html
         assert 'id="ledelse-operasjonell-v2"' not in styre_html
         assert "@media print" in styre_html
 
@@ -359,21 +381,36 @@ class TestReportingAndExport:
             income_statement=income_stmt,
             cost_drivers=drivers,
             profitability_indicators=prof_ind,
+            ebit_sensitivity=sens_model,
+            nace_benchmark=nace_model,
+            rfq_report=rfq_model,
+            operational_check=op_check_model,
             period_label="2026-01",
         )
         ledelse_html = ledelse_buf.getvalue().decode("utf-8")
 
         assert 'data-report-type="ledelse"' in ledelse_html
+        assert "theme-ledelse" in ledelse_html
         assert 'id="ledelse-operativ-oppsummering"' in ledelse_html
         assert 'id="ledelse-resultatoppstilling"' in ledelse_html
         assert 'id="ledelse-kostnadsdrivere"' in ledelse_html
+        assert 'id="ledelse-anbud-rfq"' in ledelse_html
         assert 'id="ledelse-mva-og-avvik"' in ledelse_html
         assert 'id="ledelse-operasjonell-v2"' in ledelse_html
         assert 'id="ledelse-operative-rad"' in ledelse_html
-        assert "role='progressbar'" in ledelse_html or 'role="progressbar"' in ledelse_html
-        assert "Timelister" in ledelse_html
-        assert "Varelager" in ledelse_html
-        assert "CRM" in ledelse_html
+        assert "Effekt av 1 % kutt i varekostnad" in ledelse_html
+        assert "+2 000 NOK" in ledelse_html  # 1 % prisøkning
+        assert "+600 NOK" in ledelse_html  # 1 % kutt i varekostnad
+        assert "+300 NOK" in ledelse_html  # 1 % kutt i Opex
+        assert "45 000 NOK/år" in ledelse_html  # Bankrente RFQ
+        assert "24 000 NOK/år" in ledelse_html  # Forsikring RFQ
+        assert "12 000 NOK/år" in ledelse_html  # Strøm RFQ
+        assert "81 000 NOK/år" in ledelse_html  # Totalt RFQ sparepotensial
+        assert "Varelager vs. Konto 1460" in ledelse_html
+        assert "Timelister vs. Lønnskostnad" in ledelse_html
+        assert "Reforhandling av Avtaler" in ledelse_html
+        assert "Reduksjon av Reskontrotid" in ledelse_html
+        assert "Fjerning av Inaktive Lisenser" in ledelse_html
         assert 'id="styre-executive-summary"' not in ledelse_html
         assert 'id="styre-bransje-v2"' not in ledelse_html
 

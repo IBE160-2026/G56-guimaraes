@@ -1,5 +1,5 @@
 """
-Side 4: Historikk & Trendanalyse fra lokal SQLite-database (data/g56_accounting.db).
+Side 8: Historikk & Trendanalyse fra lokal SQLite-database (data/g56_accounting.db).
 """
 
 import pandas as pd
@@ -12,7 +12,7 @@ from pdf_generator import generate_management_pdf
 
 def render_history_and_trends() -> None:
     db = st.session_state.get("db_manager")
-    st.title("🗄️ 7. Historikk & Trendanalyse (SQLite)")
+    st.title("🗄️ 8. Historikk & Trendanalyse (SQLite)")
     st.markdown(
         "Sammenlign lagrede regnskapsanalyser på tvers av perioder og sesjoner, inspiser historiske "
         "saldobalanser, hovedbøker og KI-rapporter, eller eksporter tidligere styrepakker."

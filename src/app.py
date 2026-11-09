@@ -33,6 +33,7 @@ from views.auditor_reconciliation import render_auditor_reconciliation
 from views.financial_analysis import render_financial_analysis
 from views.history_and_trends import render_history_and_trends
 from views.industry_benchmarking import render_industry_benchmarking_mockup
+from views.negotiation_and_bidding import render_negotiation_and_bidding_mockup
 from views.operational_analysis import render_operational_analysis
 from views.upload_and_control import render_upload_and_control
 
@@ -106,8 +107,9 @@ NAV_OPTIONS = [
     "📊 3. Finansiell Analyse & HB",
     "⚙️ 4. Operasjonell analyse (v2.)",
     "🏢 5. Bransjesammenligning (v2.)",
-    "💡 6. KI-Rådgiver & Eksport",
-    "🗄️ 7. Historikk & Trendanalyse",
+    "🤝 6. Forhandling og anbud (v2.)",
+    "💡 7. KI-Rådgiver & Eksport",
+    "🗄️ 8. Historikk & Trendanalyse",
 ]
 
 selected_step = st.sidebar.radio(
@@ -313,7 +315,9 @@ elif selected_step == "⚙️ 4. Operasjonell analyse (v2.)":
     render_operational_analysis()
 elif selected_step == "🏢 5. Bransjesammenligning (v2.)":
     render_industry_benchmarking_mockup()
-elif selected_step == "💡 6. KI-Rådgiver & Eksport":
+elif selected_step == "🤝 6. Forhandling og anbud (v2.)":
+    render_negotiation_and_bidding_mockup()
+elif selected_step == "💡 7. KI-Rådgiver & Eksport":
     render_ai_advisor_and_export()
-elif selected_step == "🗄️ 7. Historikk & Trendanalyse":
+elif selected_step == "🗄️ 8. Historikk & Trendanalyse":
     render_history_and_trends()

@@ -16,7 +16,7 @@ def render_operational_analysis() -> None:
         "🚧 **Under utvikling (Planlagt i v2.0):** Denne modulen kobler regnskapsdata fra Hovedbok og Saldobalanse "
         "mot operasjonelle forssystemer (CRM, timeregistrering og logistikk). "
         "For aktive finansielle nøkkeltall og deterministiske lønnsomhetsråd, se **📊 3. Finansiell Analyse & HB** "
-        "og **💡 6. KI-Rådgiver & Eksport**."
+        "og **💡 7. KI-Rådgiver & Eksport**."
     )
 
     col1, col2 = st.columns(2)

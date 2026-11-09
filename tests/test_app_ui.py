@@ -24,6 +24,7 @@ from views.auditor_reconciliation import render_auditor_reconciliation
 from views.financial_analysis import render_financial_analysis
 from views.history_and_trends import render_history_and_trends
 from views.industry_benchmarking import render_industry_benchmarking_mockup
+from views.negotiation_and_bidding import render_negotiation_and_bidding_mockup
 from views.operational_analysis import render_operational_analysis
 from views.upload_and_control import render_upload_and_control
 
@@ -31,7 +32,7 @@ from views.upload_and_control import render_upload_and_control
 class TestMultipageArchitectureAndEndToEnd:
     def test_multipage_views_and_orchestrator_compile_and_export_callables(self):
         """
-        Verifiserer at alle 7 visningsmoduler i src/views/ og src/app.py
+        Verifiserer at alle 8 visningsmoduler i src/views/ og src/app.py
         har gyldig syntaks, bruker st.sidebar.radio uten unsafe_allow_html, og eksponerer forventede funksjoner.
         """
         assert callable(render_upload_and_control)
@@ -39,6 +40,7 @@ class TestMultipageArchitectureAndEndToEnd:
         assert callable(render_financial_analysis)
         assert callable(render_operational_analysis)
         assert callable(render_industry_benchmarking_mockup)
+        assert callable(render_negotiation_and_bidding_mockup)
         assert callable(render_ai_advisor_and_export)
         assert callable(render_history_and_trends)
 
@@ -53,6 +55,7 @@ class TestMultipageArchitectureAndEndToEnd:
             "src/views/financial_analysis.py",
             "src/views/operational_analysis.py",
             "src/views/industry_benchmarking.py",
+            "src/views/negotiation_and_bidding.py",
             "src/views/ai_advisor_and_export.py",
             "src/views/history_and_trends.py",
         ]:
@@ -68,8 +71,9 @@ class TestMultipageArchitectureAndEndToEnd:
         assert "🔎 2. Revisors avstemming" in app_src
         assert "⚙️ 4. Operasjonell analyse (v2.)" in app_src
         assert "🏢 5. Bransjesammenligning (v2.)" in app_src
-        assert "💡 6. KI-Rådgiver & Eksport" in app_src
-        assert "🗄️ 7. Historikk & Trendanalyse" in app_src
+        assert "🤝 6. Forhandling og anbud (v2.)" in app_src
+        assert "💡 7. KI-Rådgiver & Eksport" in app_src
+        assert "🗄️ 8. Historikk & Trendanalyse" in app_src
 
         with open(os.path.join(repo_root, "src/views/financial_analysis.py"), "r", encoding="utf-8") as f:
             fin_src = f.read()
@@ -94,6 +98,16 @@ class TestMultipageArchitectureAndEndToEnd:
         assert "Opex/Omsetning vs. Bransje" in ind_src
         assert "🚀 Strategiske tiltak for å øke bransjescore (Kommer i v2)" in ind_src
         assert "Generer bransjetiltak med KI" in ind_src
+
+        with open(os.path.join(repo_root, "src/views/negotiation_and_bidding.py"), "r", encoding="utf-8") as f:
+            neg_src = f.read()
+        assert "🤝 Forhandling og anbud på tjenester" in neg_src
+        assert "Avlest margin: 4,5 %. Markedsstandard: 2,5 %. Potensial: 45 000 kr/år" in neg_src
+        assert "Avlest premie: 120 000 kr. Estimert kutt: 20 %. Potensial: 24 000 kr/år" in neg_src
+        assert "Oppdaget skjult påslag: 9 øre/kWh. Potensial: 12 000 kr/år" in neg_src
+        assert "Velg kategori for anbudsgenerering (F.eks. Driftskreditt, Forsikring)" in neg_src
+        assert "Generer formell anbudsforespørsel (RFQ) med KI" in neg_src
+        assert "Se eksempel på generert anbud" in neg_src
 
         with open(os.path.join(repo_root, "src/views/ai_advisor_and_export.py"), "r", encoding="utf-8") as f:
             exp_src = f.read()

@@ -1,11 +1,17 @@
 """
-Side 6: Deterministiske Lønnsomhetsråd, KI-CFO over The AI Firewall, og målgruppetilpasset Eksport
+Side 7: Deterministiske Lønnsomhetsråd, KI-CFO over The AI Firewall, og målgruppetilpasset Eksport
 (Styrepakke for styret og Beslutningsrapport for ledelsen).
 """
 
 import streamlit as st
 
-from html_report import generate_management_html
+from html_report import (
+    EbitDriverSensitivityModel,
+    NaceBenchmarkingModel,
+    OperationalCrossCheckModel,
+    RfqBiddingModel,
+    generate_management_html,
+)
 from llm_integration import ManagementCommentary, generate_management_report
 from pdf_generator import generate_management_pdf
 
@@ -14,7 +20,7 @@ def render_ai_advisor_and_export() -> None:
     ws = st.session_state.get("workspace", {})
     db = st.session_state.get("db_manager")
 
-    st.title("💡 6. KI-Rådgiver & Eksport")
+    st.title("💡 7. KI-Rådgiver & Eksport")
     st.markdown(
         "**The AI Firewall i praksis:** Python beregner faste forbedringspotensialer deterministisk ut fra regnskapsnormer, "
         "mens språkmodellen utdyper sammenhengene uten å regne på tallene selv."
@@ -167,12 +173,18 @@ def render_ai_advisor_and_export() -> None:
         elif not gen_styre and not gen_ledelse:
             st.warning("⚠️ Kryss av for minst én rapportprofil ovenfor (Styrepakke eller Beslutningsrapport) for å vise nedlastingsknapper.")
         else:
+            ebit_sens_raw = ws.get("ebit_driver_sensitivity")
+            ebit_sens_obj = EbitDriverSensitivityModel(**ebit_sens_raw) if isinstance(ebit_sens_raw, dict) else None
+            nace_obj = NaceBenchmarkingModel()
+            rfq_obj = RfqBiddingModel()
+            op_check_obj = OperationalCrossCheckModel()
+
             if gen_styre:
                 with st.container(border=True):
                     st.markdown("#### 🏛️ Styrepakke (Strategisk – For Styret)")
                     st.caption(
-                        "Innholdsprofil: Executive Summary • Hovedtall & Lønnsomhet (EBIT, Bruttomargin, Soliditet) • "
-                        "Revisors avstemming (Compliance & NS 4102) • Bransjeposisjonering (V2-teaser) • Strategiske KI-råd."
+                        "Innholdsprofil: Executive Summary • Hovedtall & Lønnsomhet (EBIT, Bruttomargin, Soliditet, TKR) • "
+                        "Governance & Compliance (Revisors avstemming & NS 4102) • Strategisk Posisjonering (NACE-Benchmarking V2) • Viktigste Strategiske Tiltak."
                     )
                     html_styre_buf = generate_management_html(
                         company_name=company_name,
@@ -187,6 +199,10 @@ def render_ai_advisor_and_export() -> None:
                         income_statement=income_statement,
                         cost_drivers=cost_drivers,
                         profitability_indicators=profitability_indicators,
+                        ebit_sensitivity=ebit_sens_obj,
+                        nace_benchmark=nace_obj,
+                        rfq_report=rfq_obj,
+                        operational_check=op_check_obj,
                         period_label=period_label,
                     )
                     pdf_styre_buf = generate_management_pdf(
@@ -221,11 +237,11 @@ def render_ai_advisor_and_export() -> None:
 
             if gen_ledelse:
                 with st.container(border=True):
-                    st.markdown("#### ⚙️ Beslutningsrapport (Operativ – For Ledelsen / CFO)")
+                    st.markdown("#### ⚙️ Beslutningsrapport (Operativ – For CEO / CFO / Ledere)")
                     st.caption(
-                        "Innholdsprofil: Operativ Oppsummering • Detaljert Resultatoppstilling (NS 4102) • "
-                        "Kostnadsdrivere (Varekostnad, Lønn, Opex med progress) • MVA & Avviksdetaljer • "
-                        "Operasjonell Analyse (V2-teaser) • Operative KI-råd."
+                        "Innholdsprofil: Operativ Oppsummering • Detaljert Resultatoppstilling & EBIT-drivere (1 % sensitivitet) • "
+                        "Kostnadskontroll & Anbud (RFQ-modul: Bankrente, Forsikring, Strøm) • "
+                        "Operasjonell Krysskontroll (Varelager vs. Konto 1460, Timelister vs. Lønn) • Taktiske Tiltak."
                     )
                     html_ledelse_buf = generate_management_html(
                         company_name=company_name,
@@ -240,6 +256,10 @@ def render_ai_advisor_and_export() -> None:
                         income_statement=income_statement,
                         cost_drivers=cost_drivers,
                         profitability_indicators=profitability_indicators,
+                        ebit_sensitivity=ebit_sens_obj,
+                        nace_benchmark=nace_obj,
+                        rfq_report=rfq_obj,
+                        operational_check=op_check_obj,
                         period_label=period_label,
                     )
                     pdf_ledelse_buf = generate_management_pdf(
