@@ -1,0 +1,11 @@
+[project]
+name = "g56-guimaraes"
+version = "2.0.0"
+description = "Ledelsesrapport og regnskapskontroll med KI (IBE160, G56)"
+requires-python = ">=3.12"
+# Vercel-funksjonen (vercel_app.py) bruker kun standardbiblioteket.
+# Avhengigheter for Streamlit-appen installeres lokalt fra requirements.txt.
+dependencies = []
+
+[tool.vercel]
+entrypoint = "vercel_app:app"
